@@ -12,6 +12,12 @@ import { AuditPage } from '@/features/audit/audit-page';
 import { SettingsPage } from '@/features/settings/settings-page';
 import { ProfilePage } from '@/features/profile/profile-page';
 import { ChangePasswordPage } from '@/features/profile/change-password-page';
+import { DevicesPage } from '@/features/devices/devices-page';
+import { DeviceFormPage } from '@/features/devices/device-form-page';
+import { DeviceDetailPage } from '@/features/devices/device-detail-page';
+import { DevicePrintPage } from '@/features/devices/device-print-page';
+import { DevicesPrintPage } from '@/features/devices/devices-print-page';
+import { CustomersPage } from '@/features/customers/customers-page';
 import { NotFoundPage } from '@/features/not-found-page';
 
 export function App() {
@@ -29,6 +35,11 @@ export function App() {
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="devices" element={<DevicesPage />} />
+            <Route path="devices/new" element={<DeviceFormPage />} />
+            <Route path="devices/:id" element={<DeviceDetailPage />} />
+            <Route path="devices/:id/edit" element={<DeviceFormPage />} />
+            <Route path="customers" element={<CustomersPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="roles" element={<RolesPage />} />
             <Route path="audit" element={<AuditPage />} />
@@ -36,6 +47,8 @@ export function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="change-password" element={<ChangePasswordPage />} />
           </Route>
+          <Route path="devices/print" element={<DevicesPrintPage />} />
+          <Route path="devices/:id/print" element={<DevicePrintPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

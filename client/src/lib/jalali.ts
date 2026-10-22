@@ -105,6 +105,60 @@ export function jalaliEndOfDayIso(value: string): string | null {
   return new Date(new Date(start).getTime() + 86_400_000).toISOString();
 }
 
+/** اجزای تاریخ و ساعت شمسی برای پر کردن فرم‌ها (ارقام لاتین) */
+const latnPartsFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian', {
+  timeZone: TEHRAN,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+function readParts(value: string | Date): Record<string, string> {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  const parts: Record<string, string> = {};
+  for (const part of latnPartsFormatter.formatToParts(date)) {
+    if (part.type !== 'literal') parts[part.type] = part.value;
+  }
+  return parts;
+}
+
+/** تاریخ ISO به ورودی تاریخ شمسی «۱۴۰۵/۰۷/۳۰» */
+export function isoToJalaliDateInput(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = readParts(date);
+  return `${parts.year}/${parts.month}/${parts.day}`;
+}
+
+/** تاریخ ISO به ورودی ساعت «۱۴:۳۰» */
+export function isoToTimeInput(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = readParts(date);
+  return `${parts.hour}:${parts.minute}`;
+}
+
+/** تبدیل تاریخ و ساعت شمسی به ISO (به وقت تهران) */
+export function jalaliDateTimeToIso(dateValue: string, timeValue = '00:00'): string | null {
+  const parsed = parseJalali(dateValue);
+  if (!parsed) return null;
+  const timeMatch = normalizeDigits(timeValue.trim()).match(/^(\d{1,2}):(\d{1,2})$/);
+  if (!timeMatch) return null;
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  if (hour > 23 || minute > 59) return null;
+  const gregorian = toGregorian(parsed.jy, parsed.jm, parsed.jd);
+  const utcMs =
+    Date.UTC(gregorian.gy, gregorian.gm - 1, gregorian.gd, hour, minute) -
+    TEHRAN_OFFSET_MINUTES * 60_000;
+  return new Date(utcMs).toISOString();
+}
+
 /** نمایش مدت زمان به فارسی */
 export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds} ثانیه`;

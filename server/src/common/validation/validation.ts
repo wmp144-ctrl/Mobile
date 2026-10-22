@@ -1,4 +1,12 @@
 import { BadRequestException, ValidationError } from '@nestjs/common';
+import { Transform } from 'class-transformer';
+
+/** رشته خالی (فیلد اختیاری که کاربر پر نکرده) را ناموجود در نظر می‌گیرد */
+export function EmptyToUndefined(): PropertyDecorator {
+  return Transform(({ value }) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  );
+}
 
 export function flattenValidationErrors(errors: ValidationError[], parent = ''): string[] {
   const messages: string[] = [];

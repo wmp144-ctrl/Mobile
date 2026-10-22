@@ -20,11 +20,13 @@ export interface AppConfig {
   dbPoolMax: number;
   dbAutoMigrate: boolean;
   jwtSecret: string;
+  deviceSecret: string;
   accessTokenMinutes: number;
   cookieSecure: boolean;
   backupDir: string;
   pgDumpPath: string;
   backupCronEnabled: boolean;
+  uploadsDir: string;
   clientDist: string;
 }
 
@@ -58,11 +60,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     dbPoolMax: readInt(env.DB_POOL_MAX, 10),
     dbAutoMigrate: readBool(env.DB_AUTO_MIGRATE, true),
     jwtSecret,
+    // راز رمزنگاری رمز/الگوی دستگاه؛ در نبود مقدار اختصاصی از راز نشست مشتق می‌شود
+    deviceSecret: env.DEVICE_SECRET && env.DEVICE_SECRET.length >= 32 ? env.DEVICE_SECRET : jwtSecret,
     accessTokenMinutes: readInt(env.ACCESS_TOKEN_MINUTES, 15),
     cookieSecure: readBool(env.COOKIE_SECURE, isProduction),
     backupDir: path.resolve(process.cwd(), env.BACKUP_DIR ?? './backups'),
     pgDumpPath: env.PG_DUMP_PATH ?? 'pg_dump',
     backupCronEnabled: readBool(env.BACKUP_CRON_ENABLED, true),
+    uploadsDir: path.resolve(process.cwd(), env.UPLOADS_DIR ?? './uploads'),
     clientDist: path.resolve(__dirname, '..', '..', '..', 'client', 'dist'),
   };
 }

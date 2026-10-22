@@ -90,6 +90,7 @@ check(created.status === 201 && created.body.role.key === 'technician', 'کار�
 const overview = await call('/api/dashboard/overview', { token });
 check(overview.status === 200 && overview.body.stats.usersTotal === 2, 'داشبورد آمار واقعی را نشان می‌دهد');
 check(overview.body.recentActivity.length > 0, 'رویدادهای اخیر در داشبورد دیده می‌شود');
+check(Array.isArray(overview.body.statusBreakdown) && overview.body.statusBreakdown.length === 12, 'وضعیت‌های تعمیر در داشبورد موجود است');
 
 const settings = await call('/api/settings', { token });
 check(settings.status === 200 && settings.body.security.idleTimeoutMinutes === 10, 'تنظیمات پیش‌فرض امنیتی خوانده شد');
@@ -100,6 +101,100 @@ const settingsUpdate = await call('/api/settings', {
   body: { workshopName: 'تعمیرگاه آزمون دود', idleTimeoutMinutes: 8 },
 });
 check(settingsUpdate.status === 200 && settingsUpdate.body.workshop.name === 'تعمیرگاه آزمون دود', 'تنظیمات ذخیره شد');
+
+const customer = await call('/api/customers', {
+  method: 'POST',
+  token,
+  body: { fullName: 'مشتری آزمون دود', phone: '09121234567', jobTitle: 'کارمند' },
+});
+check(customer.status === 201 && customer.body.deviceCount === 0, 'مشتری جدید ثبت شد');
+
+const devicePayload = {
+  customerId: customer.body.id,
+  broughtByName: 'آورنده آزمون',
+  broughtByJob: 'دانشجو',
+  broughtByPhone: '09121112233',
+  equipmentType: 'mobile',
+  manufacturer: 'samsung',
+  model: 'Galaxy A54',
+  serialNumber: 'SN-SMOKE-1',
+  imei1: '356789012345678',
+  reportedProblem: 'صفحه نمایش شکسته است.',
+  accessories: ['charger', 'sim'],
+  lockStatus: 'pin',
+  devicePassword: '4837',
+};
+
+const device = await call('/api/devices', { method: 'POST', token, body: devicePayload });
+check(
+  device.status === 201 && /^MR-\d{4}-\d{4}$/.test(device.body.intakeCode),
+  'پذیرش دستگاه با کد یکتا انجام شد',
+  `وضعیت ${device.status}`,
+);
+const deviceId = device.body.id;
+check(device.body.status.key === 'received' && device.body.hasPassword, 'پرونده با وضعیت اولیه و رمز رمزنگاری‌شده ساخته شد');
+
+const duplicate = await call('/api/devices', { method: 'POST', token, body: devicePayload });
+check(duplicate.status === 409 && duplicate.body.code === 'DEVICE_DUPLICATE', 'IMEI تکراری هشدار می‌دهد');
+
+const deviceSearch = await call('/api/devices?search=356789012345678', { token });
+check(deviceSearch.status === 200 && deviceSearch.body.total >= 1, 'جست‌وجوی دستگاه با IMEI کار می‌کند');
+
+const statusChange = await call(`/api/devices/${deviceId}/status`, {
+  method: 'PATCH',
+  token,
+  body: { status: 'in_progress', note: 'شروع تعمیر در آزمون دود' },
+});
+check(
+  statusChange.status === 200 &&
+    statusChange.body.status.key === 'in_progress' &&
+    statusChange.body.statusHistory[0].changedByName === ADMIN.fullName,
+  'تغییر وضعیت با تاریخچه و نام کاربر ثبت شد',
+);
+
+const operation = await call(`/api/devices/${deviceId}/operations`, {
+  method: 'POST',
+  token,
+  body: {
+    operationType: 'backup',
+    title: 'بکاپ آزمون دود',
+    dataSizeBytes: 1048576,
+    storagePath: 'smoke/backups',
+    result: 'success',
+    deviceStatusAfter: 'ready_delivery',
+  },
+});
+check(
+  operation.status === 201 &&
+    operation.body.operations.length === 1 &&
+    operation.body.status.key === 'ready_delivery',
+  'اقدام ثبت شد و وضعیت نهایی به‌روزرسانی گردید',
+);
+
+const detail = await call(`/api/devices/${deviceId}`, { token });
+check(
+  detail.status === 200 &&
+    Array.isArray(detail.body.files) &&
+    Array.isArray(detail.body.images) &&
+    Array.isArray(detail.body.technicianNotes),
+  'پرونده دیجیتال همه بخش‌ها را برمی‌گرداند',
+);
+
+const deviceConfig = await call('/api/device-config', { token });
+check(
+  deviceConfig.status === 200 && deviceConfig.body.fields.length >= 19 && deviceConfig.body.options.manufacturer.length > 0,
+  'تنظیمات فیلدها و فهرست‌ها در دسترس است',
+);
+
+const exportResponse = await fetch(`${BASE}/api/devices/export?search=SMOKE`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+check(
+  exportResponse.status === 200 &&
+    (exportResponse.headers.get('content-type') ?? '').includes('spreadsheetml'),
+  'خروجی اکسل تجهیزات تولید شد',
+);
+await exportResponse.arrayBuffer();
 
 const audit = await call('/api/audit-logs?action=auth.login', { token });
 check(audit.status === 200 && audit.body.total >= 1, 'تاریخچه ورود قابل مشاهده است');

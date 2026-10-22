@@ -1,4 +1,16 @@
-import { Activity, Database, KeyRound, RefreshCw, Users, UsersRound } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  CalendarClock,
+  Database,
+  KeyRound,
+  PackageCheck,
+  RefreshCw,
+  Users,
+  UsersRound,
+  Wrench,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useApiQuery } from '@/lib/use-api';
 import { formatJalaliDateTime, formatJalaliLong, formatDuration } from '@/lib/jalali';
@@ -10,12 +22,20 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
+import { statusBadgeVariant } from '@/lib/device-status';
 
 const STAT_ITEMS = [
   { key: 'usersTotal', label: 'کل کاربران', icon: Users, tone: 'bg-brand-50 text-brand-600' },
   { key: 'usersActive', label: 'کاربران فعال', icon: UsersRound, tone: 'bg-emerald-50 text-emerald-600' },
   { key: 'sessionsActive', label: 'نشست‌های باز', icon: KeyRound, tone: 'bg-amber-50 text-amber-600' },
   { key: 'auditToday', label: 'رویدادهای امروز', icon: Activity, tone: 'bg-violet-50 text-violet-600' },
+] as const;
+
+const DEVICE_STAT_ITEMS = [
+  { key: 'devicesActive', label: 'تعمیرات در جریان', icon: Wrench, tone: 'bg-brand-50 text-brand-600' },
+  { key: 'devicesReady', label: 'آماده تحویل', icon: PackageCheck, tone: 'bg-emerald-50 text-emerald-600' },
+  { key: 'devicesDeliveredToday', label: 'تحویل امروز', icon: CalendarClock, tone: 'bg-violet-50 text-violet-600' },
+  { key: 'devicesOverdue', label: 'دارای تأخیر', icon: AlertTriangle, tone: 'bg-rose-50 text-rose-600' },
 ] as const;
 
 export function DashboardPage() {
@@ -50,6 +70,57 @@ export function DashboardPage() {
 
       {data ? (
         <>
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-ink-700">وضعیت تعمیرگاه</h2>
+              <Link to="/devices" className="text-xs text-brand-700 hover:underline">
+                مشاهده همه پرونده‌ها
+              </Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {DEVICE_STAT_ITEMS.map((item) => (
+                <Card key={item.key} className="transition hover:shadow-md">
+                  <CardContent className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-ink-500">{item.label}</p>
+                      <p className="mt-2 text-2xl font-bold text-ink-900">
+                        {formatNumber(data.stats[item.key])}
+                      </p>
+                    </div>
+                    <span className={`flex size-11 items-center justify-center rounded-xl ${item.tone}`}>
+                      <item.icon className="size-5" />
+                    </span>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>وضعیت پرونده‌های تعمیر</CardTitle>
+                <p className="mt-1 text-xs text-ink-400">
+                  {formatNumber(data.stats.devicesTotal)} پرونده برای{' '}
+                  {formatNumber(data.stats.customersTotal)} مشتری
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2 pt-3">
+              {data.statusBreakdown.map((status) => (
+                <div
+                  key={status.key}
+                  className="flex items-center gap-2 rounded-xl border border-ink-200 px-3 py-2"
+                >
+                  <Badge variant={statusBadgeVariant(status.tone)}>{status.label}</Badge>
+                  <span className="text-sm font-bold text-ink-800">
+                    {formatNumber(status.count)}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {STAT_ITEMS.map((item) => (
               <Card key={item.key} className="transition hover:shadow-md">
@@ -67,6 +138,61 @@ export function DashboardPage() {
               </Card>
             ))}
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>آخرین پذیرش‌ها</CardTitle>
+              <Link to="/devices" className="text-xs text-brand-700 hover:underline">
+                همه تجهیزات
+              </Link>
+            </CardHeader>
+            <CardContent className="p-0 pt-4">
+              {data.recentDevices.length === 0 ? (
+                <EmptyState
+                  title="هنوز دستگاهی پذیرش نشده است"
+                  description="با ثبت اولین پذیرش، وضعیت تعمیرات در داشبورد نمایش داده می‌شود."
+                />
+              ) : (
+                <Table className="min-w-[600px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>کد پذیرش</TableHead>
+                      <TableHead>تجهیز</TableHead>
+                      <TableHead>مالک</TableHead>
+                      <TableHead>وضعیت</TableHead>
+                      <TableHead>زمان دریافت</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.recentDevices.map((device) => (
+                      <TableRow key={device.id}>
+                        <TableCell className="whitespace-nowrap font-medium" dir="ltr">
+                          <Link to={`/devices/${device.id}`} className="text-brand-700 hover:underline">
+                            {device.intakeCode}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs text-ink-600">
+                          {device.equipmentType.label}
+                          {device.model ? ` — ${device.model}` : ''}
+                        </TableCell>
+                        <TableCell className="text-xs text-ink-600">
+                          {device.owner.fullName}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusBadgeVariant(device.status.tone)}>
+                            {device.status.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-ink-500">
+                          {formatJalaliDateTime(device.receivedAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">

@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
+import { DeviceConfigSection } from './device-config-section';
 
 interface SettingsFormState {
   workshopName: string;
@@ -282,6 +283,10 @@ export function SettingsPage() {
       ) : null}
 
       {canBackup ? <BackupsSection /> : null}
+
+      <div className="mt-4">
+        <DeviceConfigSection canManage={canManage} />
+      </div>
     </div>
   );
 }

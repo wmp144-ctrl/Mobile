@@ -94,6 +94,45 @@ export const api = {
   delete<T>(path: string, options: Omit<RequestOptions, 'method' | 'body'> = {}): Promise<T> {
     return this.request<T>(path, { ...options, method: 'DELETE' });
   },
+
+  /** بارگذاری فایل چندبخشی (FormData) با همان مدیریت نشست */
+  async upload<T>(path: string, formData: FormData): Promise<T> {
+    const buildInit = (): RequestInit => ({
+      method: 'POST',
+      credentials: 'include',
+      headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+      body: formData,
+    });
+
+    let response = await fetch(path, buildInit());
+    if (response.status === 401 && this.onUnauthorized) {
+      const refreshed = await this.onUnauthorized();
+      if (refreshed) response = await fetch(path, buildInit());
+    }
+
+    const payload = (await parseJson(response)) as T & ErrorPayload;
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        payload?.code ?? 'HTTP_ERROR',
+        messageFrom(payload ?? null, 'بارگذاری فایل ناموفق بود.'),
+        payload?.details,
+      );
+    }
+    return payload as T;
+  },
+
+  /** دریافت فایل محافظت‌شده و تبدیل به آدرس قابل نمایش */
+  async objectUrl(path: string): Promise<string> {
+    const response = await fetch(path, {
+      credentials: 'include',
+      headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, 'HTTP_ERROR', 'دریافت فایل ناموفق بود.');
+    }
+    return URL.createObjectURL(await response.blob());
+  },
 };
 
 export async function downloadFile(path: string, fileName: string): Promise<void> {

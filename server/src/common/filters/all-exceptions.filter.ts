@@ -24,6 +24,7 @@ const STATUS_CODES: Record<number, string> = {
   [HttpStatus.FORBIDDEN]: ErrorCodes.FORBIDDEN,
   [HttpStatus.NOT_FOUND]: ErrorCodes.NOT_FOUND,
   [HttpStatus.CONFLICT]: ErrorCodes.CONFLICT,
+  [HttpStatus.PAYLOAD_TOO_LARGE]: ErrorCodes.FILE_TOO_LARGE,
   [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
 };
 
@@ -63,6 +64,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
         if (status === HttpStatus.NOT_FOUND && /^Cannot (GET|POST|PUT|PATCH|DELETE)/.test(message)) {
           message = 'مسیر درخواستی در سرور وجود ندارد.';
+        }
+        if (status === HttpStatus.PAYLOAD_TOO_LARGE) {
+          message = 'حجم فایل ارسالی بیش از حد مجاز است.';
         }
       }
     } else if (isDatabaseError(exception)) {

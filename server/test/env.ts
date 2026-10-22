@@ -11,3 +11,4 @@ process.env.COOKIE_SECURE = 'false';
 process.env.BACKUP_DIR = path.resolve(process.cwd(), 'test-backups');
 process.env.BACKUP_CRON_ENABLED = 'false';
 process.env.PG_DUMP_PATH = TEST_PG_DUMP;
+process.env.UPLOADS_DIR = path.resolve(process.cwd(), 'test-uploads');

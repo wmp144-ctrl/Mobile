@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Length, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export class UpdateSettingsDto {
   @IsOptional()
@@ -51,4 +51,17 @@ export class UpdateSettingsDto {
   @Min(1, { message: 'تعداد نسخه‌های پشتیبان حداقل ۱ است.' })
   @Max(365, { message: 'تعداد نسخه‌های پشتیبان حداکثر ۳۶۵ است.' })
   backupRetentionCount?: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 8, { message: 'پیشوند کد پذیرش باید بین ۱ تا ۸ نویسه باشد.' })
+  @Matches(/^[A-Za-z0-9]+$/, { message: 'پیشوند کد پذیرش فقط شامل حروف انگلیسی و رقم است.' })
+  intakePrefix?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'مهلت پیش‌فرض تحویل باید عدد صحیح باشد.' })
+  @Min(0, { message: 'مهلت پیش‌فرض تحویل نمی‌تواند منفی باشد.' })
+  @Max(180, { message: 'مهلت پیش‌فرض تحویل حداکثر ۱۸۰ روز است.' })
+  defaultDueDays?: number;
 }

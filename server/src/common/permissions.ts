@@ -40,16 +40,16 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   { key: PERMISSIONS.SETTINGS_MANAGE, label: 'ویرایش تنظیمات', group: 'تنظیمات' },
   { key: PERMISSIONS.AUDIT_VIEW, label: 'مشاهده تاریخچه تغییرات', group: 'امنیت' },
   { key: PERMISSIONS.BACKUPS_MANAGE, label: 'پشتیبان‌گیری و دانلود نسخه پشتیبان', group: 'امنیت' },
-  { key: PERMISSIONS.CUSTOMERS_VIEW, label: 'مشاهده مشتریان', group: 'مشتریان', future: true },
-  { key: PERMISSIONS.CUSTOMERS_MANAGE, label: 'مدیریت مشتریان', group: 'مشتریان', future: true },
-  { key: PERMISSIONS.REPAIRS_VIEW, label: 'مشاهده پرونده‌های تعمیر', group: 'تعمیرات', future: true },
-  { key: PERMISSIONS.REPAIRS_MANAGE, label: 'ثبت و ویرایش تعمیرات', group: 'تعمیرات', future: true },
+  { key: PERMISSIONS.CUSTOMERS_VIEW, label: 'مشاهده مشتریان', group: 'مشتریان' },
+  { key: PERMISSIONS.CUSTOMERS_MANAGE, label: 'مدیریت مشتریان', group: 'مشتریان' },
+  { key: PERMISSIONS.REPAIRS_VIEW, label: 'مشاهده پرونده‌های تعمیر', group: 'تعمیرات' },
+  { key: PERMISSIONS.REPAIRS_MANAGE, label: 'ثبت و ویرایش تعمیرات', group: 'تعمیرات' },
   { key: PERMISSIONS.INVENTORY_VIEW, label: 'مشاهده انبار', group: 'انبار', future: true },
   { key: PERMISSIONS.INVENTORY_MANAGE, label: 'مدیریت انبار', group: 'انبار', future: true },
   { key: PERMISSIONS.INVOICES_VIEW, label: 'مشاهده فاکتورها', group: 'مالی', future: true },
   { key: PERMISSIONS.INVOICES_MANAGE, label: 'صدور و ویرایش فاکتور', group: 'مالی', future: true },
   { key: PERMISSIONS.REPORTS_VIEW, label: 'مشاهده گزارش‌ها', group: 'گزارش‌ها', future: true },
-  { key: PERMISSIONS.FILES_MANAGE, label: 'مدیریت فایل‌ها و پیوست‌ها', group: 'فایل‌ها', future: true },
+  { key: PERMISSIONS.FILES_MANAGE, label: 'مدیریت فایل‌ها و پیوست‌ها', group: 'فایل‌ها' },
 ];
 
 export function hasPermission(granted: string[] | undefined, required: string): boolean {

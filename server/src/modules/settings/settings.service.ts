@@ -22,10 +22,16 @@ export interface BackupSettings {
   retentionCount: number;
 }
 
+export interface DeviceSettings {
+  intakePrefix: string;
+  defaultDueDays: number;
+}
+
 export interface FullSettings {
   workshop: WorkshopSettings;
   security: SecuritySettings;
   backup: BackupSettings;
+  devices: DeviceSettings;
 }
 
 const DEFAULT_WORKSHOP: WorkshopSettings = { name: '', address: '', phone: '' };
@@ -36,6 +42,7 @@ const DEFAULT_SECURITY: SecuritySettings = {
   sessionDays: 7,
 };
 const DEFAULT_BACKUP: BackupSettings = { retentionCount: 14 };
+const DEFAULT_DEVICES: DeviceSettings = { intakePrefix: 'MR', defaultDueDays: 3 };
 
 @Injectable()
 export class SettingsService {
@@ -73,6 +80,10 @@ export class SettingsService {
       backup: {
         retentionCount: num('backup.retentionCount', DEFAULT_BACKUP.retentionCount),
       },
+      devices: {
+        intakePrefix: str('devices.intakePrefix', DEFAULT_DEVICES.intakePrefix) || DEFAULT_DEVICES.intakePrefix,
+        defaultDueDays: num('devices.defaultDueDays', DEFAULT_DEVICES.defaultDueDays),
+      },
     };
   }
 
@@ -91,6 +102,10 @@ export class SettingsService {
     if (dto.lockoutMinutes !== undefined) entries.push(['security.lockoutMinutes', dto.lockoutMinutes]);
     if (dto.sessionDays !== undefined) entries.push(['security.sessionDays', dto.sessionDays]);
     if (dto.backupRetentionCount !== undefined) entries.push(['backup.retentionCount', dto.backupRetentionCount]);
+    if (dto.intakePrefix !== undefined) {
+      entries.push(['devices.intakePrefix', dto.intakePrefix.trim().toUpperCase()]);
+    }
+    if (dto.defaultDueDays !== undefined) entries.push(['devices.defaultDueDays', dto.defaultDueDays]);
 
     if (entries.length > 0) {
       await this.db.withTransaction(async (client) => {

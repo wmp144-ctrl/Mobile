@@ -16,6 +16,9 @@ coverage/
 backups/
 test-backups/
 test-tools/
+uploads/
+test-uploads/
+.pgdev-uploads/
 .pgtest-data/
 .pgdev-data/
 logs/
