@@ -1,0 +1,35 @@
+import { HttpException, HttpStatus } from '@nestjs/common';
+
+export class AppException extends HttpException {
+  constructor(
+    public readonly code: string,
+    message: string,
+    status: HttpStatus = HttpStatus.BAD_REQUEST,
+    public readonly details?: unknown,
+  ) {
+    super(message, status);
+  }
+}
+
+export const ErrorCodes = {
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  ACCOUNT_INACTIVE: 'ACCOUNT_INACTIVE',
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
+  SESSION_INVALID: 'SESSION_INVALID',
+  FORBIDDEN: 'FORBIDDEN',
+  PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
+  INVALID_PASSWORD: 'INVALID_PASSWORD',
+  WEAK_PASSWORD: 'WEAK_PASSWORD',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  NOT_FOUND: 'NOT_FOUND',
+  DUPLICATE: 'DUPLICATE',
+  CONFLICT: 'CONFLICT',
+  SETUP_COMPLETED: 'SETUP_COMPLETED',
+  LAST_ADMIN: 'LAST_ADMIN',
+  SYSTEM_ROLE: 'SYSTEM_ROLE',
+  ROLE_IN_USE: 'ROLE_IN_USE',
+  BACKUP_FAILED: 'BACKUP_FAILED',
+  PG_DUMP_MISSING: 'PG_DUMP_MISSING',
+  INTERNAL: 'INTERNAL',
+} as const;

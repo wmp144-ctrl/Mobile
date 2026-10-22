@@ -1,0 +1,102 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Vazirmatn', ui-sans-serif, system-ui, 'Segoe UI', Tahoma, sans-serif;
+
+  --color-brand-50: #eef3ff;
+  --color-brand-100: #dde8ff;
+  --color-brand-200: #c0d3ff;
+  --color-brand-300: #96b4ff;
+  --color-brand-400: #688cfa;
+  --color-brand-500: #4364ef;
+  --color-brand-600: #2c46d4;
+  --color-brand-700: #2538ac;
+  --color-brand-800: #22318a;
+  --color-brand-900: #1f2c6d;
+
+  --color-ink-50: #f6f7fb;
+  --color-ink-100: #eceef5;
+  --color-ink-200: #d9dde9;
+  --color-ink-300: #b8bfd2;
+  --color-ink-400: #8d97b2;
+  --color-ink-500: #66718f;
+  --color-ink-600: #4c5773;
+  --color-ink-700: #3a4459;
+  --color-ink-800: #232b3d;
+  --color-ink-900: #131a29;
+
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+
+  --radius-xl: 0.9rem;
+  --radius-2xl: 1.15rem;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-ink-50);
+    color: var(--color-ink-800);
+  }
+
+  * {
+    border-color: var(--color-ink-200);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+  }
+
+  ::selection {
+    background: var(--color-brand-200);
+  }
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-300) transparent;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}

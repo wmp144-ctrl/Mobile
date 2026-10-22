@@ -1,0 +1,51 @@
+export const AUDIT_ACTIONS = {
+  AUTH_LOGIN: 'auth.login',
+  AUTH_LOGIN_FAILED: 'auth.login_failed',
+  AUTH_LOGIN_LOCKED: 'auth.login_locked',
+  AUTH_LOGOUT: 'auth.logout',
+  AUTH_PASSWORD_CHANGED: 'auth.password_changed',
+  AUTH_UNLOCKED: 'auth.unlocked',
+  AUTH_UNLOCK_FAILED: 'auth.unlock_failed',
+  AUTH_SESSION_REVOKED: 'auth.session_revoked',
+  AUTH_REFRESH_REJECTED: 'auth.refresh_rejected',
+  SETUP_COMPLETED: 'setup.completed',
+  USER_CREATED: 'user.created',
+  USER_UPDATED: 'user.updated',
+  USER_DELETED: 'user.deleted',
+  USER_PASSWORD_RESET: 'user.password_reset',
+  ROLE_CREATED: 'role.created',
+  ROLE_UPDATED: 'role.updated',
+  ROLE_DELETED: 'role.deleted',
+  SETTINGS_UPDATED: 'settings.updated',
+  BACKUP_CREATED: 'backup.created',
+  BACKUP_FAILED: 'backup.failed',
+  BACKUP_DOWNLOADED: 'backup.downloaded',
+} as const;
+
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  [AUDIT_ACTIONS.AUTH_LOGIN]: 'ورود موفق',
+  [AUDIT_ACTIONS.AUTH_LOGIN_FAILED]: 'تلاش ناموفق ورود',
+  [AUDIT_ACTIONS.AUTH_LOGIN_LOCKED]: 'قفل حساب پس از تلاش ناموفق',
+  [AUDIT_ACTIONS.AUTH_LOGOUT]: 'خروج از حساب',
+  [AUDIT_ACTIONS.AUTH_PASSWORD_CHANGED]: 'تغییر رمز عبور',
+  [AUDIT_ACTIONS.AUTH_UNLOCKED]: 'بازکردن قفل صفحه',
+  [AUDIT_ACTIONS.AUTH_UNLOCK_FAILED]: 'تلاش ناموفق بازکردن قفل',
+  [AUDIT_ACTIONS.AUTH_SESSION_REVOKED]: 'بستن نشست کاربر',
+  [AUDIT_ACTIONS.AUTH_REFRESH_REJECTED]: 'رد شدن تازه‌سازی نشست',
+  [AUDIT_ACTIONS.SETUP_COMPLETED]: 'راه‌اندازی اولیه',
+  [AUDIT_ACTIONS.USER_CREATED]: 'ایجاد کاربر',
+  [AUDIT_ACTIONS.USER_UPDATED]: 'ویرایش کاربر',
+  [AUDIT_ACTIONS.USER_DELETED]: 'حذف کاربر',
+  [AUDIT_ACTIONS.USER_PASSWORD_RESET]: 'بازنشانی رمز کاربر',
+  [AUDIT_ACTIONS.ROLE_CREATED]: 'ایجاد نقش',
+  [AUDIT_ACTIONS.ROLE_UPDATED]: 'ویرایش نقش',
+  [AUDIT_ACTIONS.ROLE_DELETED]: 'حذف نقش',
+  [AUDIT_ACTIONS.SETTINGS_UPDATED]: 'تغییر تنظیمات',
+  [AUDIT_ACTIONS.BACKUP_CREATED]: 'ایجاد نسخه پشتیبان',
+  [AUDIT_ACTIONS.BACKUP_FAILED]: 'خطا در پشتیبان‌گیری',
+  [AUDIT_ACTIONS.BACKUP_DOWNLOADED]: 'دانلود نسخه پشتیبان',
+};
+
+export function auditActionLabel(action: string): string {
+  return AUDIT_ACTION_LABELS[action] ?? action;
+}

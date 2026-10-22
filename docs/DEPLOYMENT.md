@@ -1,0 +1,165 @@
+# راهنمای استقرار روی سرور ویندوز (شبکه داخلی)
+
+این سند برای نصب نسخه عملیاتی مرحله ۱ روی یک سرور ویندوز و اتصال حدود ۵ کلاینت نوشته شده است.
+همه مراحل بدون اینترنت روی سرور انجام می‌شود؛ فقط برای ساخت نسخه (Build) به وابستگی‌های npm نیاز است.
+
+## پیش‌نیازها
+
+| مورد | پیشنهاد |
+| --- | --- |
+| سیستم‌عامل سرور | Windows Server 2019/2022 یا Windows 11 |
+| Node.js | نسخه ۲۲ LTS (نصب‌کننده آفلاین MSI) |
+| PostgreSQL | نسخه ۱۸ (نصب‌کننده ویندوز) |
+| IP سرور | IP ثابت در شبکه داخلی، مثلاً `192.168.1.10` |
+| پورت برنامه | `3000` (در فایروال ویندوز باز شود) |
+
+کلاینت‌ها به هیچ نصبی نیاز ندارند؛ فقط مرورگر (Edge یا Chrome) و آدرس سرور.
+
+## ۱. نصب پایگاه داده
+
+1. PostgreSQL را نصب کنید و رمز کاربر `postgres` را در جای امن نگهداری کنید.
+2. با `psql` یا pgAdmin این کاربر و پایگاه داده را بسازید:
+
+```sql
+CREATE USER repair_app WITH PASSWORD 'یک-رمز-قوی-و-یکتا';
+CREATE DATABASE repair_workshop OWNER repair_app ENCODING 'UTF8';
+```
+
+3. اگر سرور روی همان ماشین است، سرویس PostgreSQL فقط روی `localhost` گوش دهد (پیش‌فرض نصب ویندوز).
+   کلاینت‌ها نباید مستقیماً به پورت ۵۴۳۲ دسترسی داشته باشند.
+
+## ۲. آماده‌سازی برنامه
+
+پوشه پروژه را روی سرور قرار دهید (مثلاً `C:\RepairWorkshop`). سپس:
+
+```powershell
+cd C:\RepairWorkshop
+npm ci
+```
+
+فایل `server\.env` را از نمونه بسازید و مقادیر را تنظیم کنید:
+
+```powershell
+Copy-Item server\.env.example server\.env
+```
+
+نمونه محتوای `server\.env` برای سرور:
+
+```ini
+NODE_ENV=production
+PORT=3000
+TZ=Asia/Tehran
+
+DATABASE_URL=postgresql://repair_app:رمز-پایگاه-داده@127.0.0.1:5432/repair_workshop
+DB_POOL_MAX=10
+DB_AUTO_MIGRATE=true
+
+# با دستور زیر یک مقدار تصادفی بسازید:
+# node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+JWT_SECRET=مقدار-تصادفی-حداقل-۳۲-نویسه
+ACCESS_TOKEN_MINUTES=15
+COOKIE_SECURE=false
+
+BACKUP_DIR=D:\Backups\RepairWorkshop
+PG_DUMP_PATH=C:\Program Files\PostgreSQL\18\bin\pg_dump.exe
+BACKUP_CRON_ENABLED=true
+```
+
+نکات:
+
+- `JWT_SECRET` باید حداقل ۳۲ نویسه و کاملاً تصادفی باشد. با تغییر آن، همه نشست‌ها بسته می‌شوند.
+- `PG_DUMP_PATH` باید به فایل واقعی `pg_dump.exe` اشاره کند؛ در غیر این صورت دکمه پشتیبان‌گیری خطا
+  می‌دهد و پشتیبان خودکار روزانه انجام نمی‌شود.
+- پوشه `BACKUP_DIR` باید روی دیسک سرور باشد، نه روی اشتراک شبکه، و فقط برای مدیر سرور قابل دسترسی باشد.
+- برنامه خودش رابط کاربری ساخته‌شده را سرو می‌کند؛ نیازی به IIS یا وب‌سرور جدا نیست.
+
+## ۳. ساخت و اجرا
+
+```powershell
+npm run build
+npm start
+```
+
+`npm start` سرویس را با پوشه کاری `server` اجرا می‌کند تا `server\.env` خوانده شود.
+آدرس سرویس: `http://localhost:3000` و برای کلاینت‌ها: `http://192.168.1.10:3000`.
+
+### اجرای خودکار به‌عنوان سرویس ویندوز
+
+روش پیشنهادی: نصب [NSSM](https://nssm.cc/) (یا استفاده از Task Scheduler):
+
+```powershell
+nssm install RepairWorkshop "C:\Program Files\nodejs\node.exe" "dist\main.js"
+nssm set RepairWorkshop AppDirectory "C:\RepairWorkshop\server"
+nssm set RepairWorkshop AppStdout "C:\RepairWorkshop\logs\service-out.log"
+nssm set RepairWorkshop AppStderr "C:\RepairWorkshop\logs\service-err.log"
+nssm set RepairWorkshop Start SERVICE_AUTO_START
+nssm start RepairWorkshop
+```
+
+مهم: پوشه کاری (`AppDirectory`) باید `server` باشد تا فایل `.env` و مسیر پشتیبان‌ها درست خوانده شود.
+
+### فایروال
+
+```powershell
+New-NetFirewallRule -DisplayName "RepairWorkshop 3000" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+```
+
+پورت‌های ۵۴۳۲ (PostgreSQL) و ۳۰۰۱ (توسعه) نباید از بیرون قابل دسترسی باشند.
+
+## ۴. اولین راه‌اندازی
+
+1. از یکی از کلاینت‌ها `http://192.168.1.10:3000` را باز کنید.
+2. صفحه راه‌اندازی اولیه نمایش داده می‌شود: نام کارگاه، نام مدیر، نام کاربری و رمز عبور مدیر کل.
+3. پس از ورود، از بخش «کاربران» برای همکاران حساب بسازید و نقش آن‌ها را انتخاب کنید.
+4. در «تنظیمات»، مدت قفل خودکار، تعداد تلاش ناموفق و نگهداری نسخه‌های پشتیبان را متناسب با کارگاه تنظیم کنید.
+
+پس از ایجاد اولین کاربر، endpoint راه‌اندازی برای همیشه بسته می‌شود.
+
+## ۵. پشتیبان‌گیری و بازیابی
+
+برنامه هر روز ساعت ۳ بامداد یک نسخه پشتیبان با `pg_dump -Fc` می‌سازد و نسخه‌های قدیمی‌تر از
+تعداد تنظیم‌شده را حذف می‌کند. مدیر می‌تواند از «تنظیمات ← پشتیبان‌گیری» نسخه دستی بسازد و دانلود کند.
+
+بازیابی (فقط توسط مدیر سرور و در زمان توقف برنامه):
+
+```powershell
+# ابتدا از وضعیت فعلی پشتیبان بگیرید
+& "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" -Fc -U repair_app -h 127.0.0.1 -d repair_workshop -f D:\Backups\before-restore.dump
+
+# توقف سرویس
+nssm stop RepairWorkshop
+
+# بازیابی (پایگاه داده باید خالی باشد یا با -c بازنویسی شود)
+& "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" -U repair_app -h 127.0.0.1 -d repair_workshop --clean --if-exists "D:\Backups\RepairWorkshop\backup-....dump"
+
+nssm start RepairWorkshop
+```
+
+نسخه‌های پشتیبان را روی یک دیسک جداگانه یا فضای خارج از سرور نیز کپی کنید.
+
+## ۶. به‌روزرسانی نسخه
+
+1. از پایگاه داده پشتیبان بگیرید.
+2. سرویس را متوقف کنید.
+3. فایل‌های برنامه را جایگزین کنید (پوشه‌های `node_modules` و `.env` و پوشه پشتیبان‌ها را حذف نکنید).
+4. `npm ci` و سپس `npm run build` را اجرا کنید.
+5. سرویس را شروع کنید. مهاجرت‌های جدید به‌صورت خودکار و افزایشی اجرا می‌شوند و داده‌های موجود حذف نمی‌شوند.
+
+## ۷. عیب‌یابی
+
+| نشانه | بررسی |
+| --- | --- |
+| صفحه ورود باز نمی‌شود | سرویس در حال اجراست؟ پورت ۳۰۰۰ در فایروال باز است؟ |
+| «ارتباط با سرور برقرار نشد» | `DATABASE_URL` و اجرای PostgreSQL؛ گزارش `logs\service-err.log` |
+| پشتیبان‌گیری خطا می‌دهد | مسیر `PG_DUMP_PATH` و دسترسی نوشتن در `BACKUP_DIR` |
+| زمان‌ها اشتباه است | `TZ=Asia/Tehran` در `.env` سرور و ساعت ویندوز |
+| ورود ناموفق با پیام قفل | تنظیم «حداکثر تلاش ناموفق» و «مدت قفل حساب» در تنظیمات |
+
+## ۸. نکات امنیتی بهره‌برداری
+
+- برنامه روی HTTP سرو می‌شود تا در شبکه داخلی ساده باشد؛ شبکه کارگاه را از مهمان‌ها جدا کنید.
+  در صورت نیاز به HTTPS، از یک Reverse Proxy معتبر (مثل Caddy یا IIS) در همان سرور استفاده کنید و
+  `COOKIE_SECURE=true` را تنظیم کنید.
+- رمز پایگاه داده و `JWT_SECRET` را فقط در `server\.env` نگه دارید؛ این فایل در Git نیست.
+- کاربر پایگاه داده `repair_app` را به پایگاه‌های دیگر دسترسی ندهید.
+- نسخه پشتیبان شامل اطلاعات مشتریان است؛ آن را رمزنگاری یا در محل امن نگهداری کنید.

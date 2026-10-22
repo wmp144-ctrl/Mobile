@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+coverage/
+*.tsbuildinfo
+
+# environment and secrets (never commit)
+.env
+.env.local
+.env.production
+!.env.example
+
+# runtime data
+backups/
+test-backups/
+test-tools/
+.pgtest-data/
+.pgdev-data/
+logs/
+*.log
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

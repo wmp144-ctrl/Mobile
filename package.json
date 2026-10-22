@@ -1,0 +1,25 @@
+{
+  "name": "mobile-repair-workshop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "سیستم مدیریت تعمیرگاه تخصصی موبایل و تجهیزات الکترونیکی",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev:server": "npm run start:dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client && npm run build --workspace server",
+    "start": "npm run start:prod --workspace server",
+    "test": "npm run test --workspace server && npm run test --workspace client",
+    "test:server": "npm run test --workspace server",
+    "test:client": "npm run test --workspace client",
+    "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace client",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  }
+}
