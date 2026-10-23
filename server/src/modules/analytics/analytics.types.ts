@@ -145,7 +145,7 @@ export interface ReportRunResult {
   table: ReportTableResult;
   generatedAt: string;
   filters: AnalyticsFilter;
-  workshop: { name: string; phone: string; address: string };
+  workshop: { name: string; phone: string; address: string; logo: string };
 }
 
 export interface DashboardStats {
@@ -171,7 +171,7 @@ export interface DashboardResponse {
   };
   recentDevices: ReportTableResult;
   generatedAt: string;
-  workshop: { name: string; phone: string; address: string };
+  workshop: { name: string; phone: string; address: string; logo: string };
   currentUser: { fullName: string; roleNameFa: string };
 }
 
@@ -192,7 +192,7 @@ export interface AnalyticsOptions {
   years: { value: number; label: string }[];
   currentYear: number;
   currentMonth: number;
-  workshop: { name: string; phone: string; address: string };
+  workshop: { name: string; phone: string; address: string; logo: string };
 }
 
 export interface SavedReportDto {

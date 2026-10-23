@@ -50,7 +50,7 @@ const options: AnalyticsOptions = {
   years: [{ value: 1405, label: '۱۴۰۵' }],
   currentYear: 1405,
   currentMonth: 7,
-  workshop: { name: 'تعمیرگاه نمونه', phone: '021-12345678', address: 'تهران' },
+  workshop: { name: 'تعمیرگاه نمونه', phone: '021-12345678', address: 'تهران', logo: '' },
 };
 
 const dashboard: AnalyticsDashboard = {

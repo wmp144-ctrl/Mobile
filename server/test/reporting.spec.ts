@@ -526,6 +526,37 @@ describe('داشبورد تحلیلی و گزارش‌گیری پیشرفته (�
     expect(text).toContain(devices.mobileInProgress.intakeCode);
   });
 
+  it('لوگوی کارگاه ذخیره و در سربرگ گزارش‌ها برگردانده می‌شود', async () => {
+    const logo =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+    const updated = await request(http)
+      .patch('/api/settings')
+      .set(bearer(adminToken))
+      .send({ workshopLogo: logo })
+      .expect(200);
+    expect(updated.body.workshop.logo).toBe(logo);
+
+    const dashboard = await request(http)
+      .get('/api/analytics/dashboard')
+      .set(bearer(adminToken))
+      .expect(200);
+    expect(dashboard.body.workshop.logo).toBe(logo);
+
+    const report = await request(http)
+      .post('/api/reports/run')
+      .set(bearer(adminToken))
+      .send({ charts: [{ id: 'logo', dimension: 'status', metric: 'count', chartType: 'doughnut' }] })
+      .expect(201);
+    expect(report.body.workshop.logo).toBe(logo);
+
+    await request(http)
+      .patch('/api/settings')
+      .set(bearer(adminToken))
+      .send({ workshopLogo: 'javascript:alert(1)' })
+      .expect(400);
+  });
+
   it('دسترسی گزارش‌ها بر اساس مجوز reports.view کنترل می‌شود', async () => {
     const roles = await request(http)
       .get('/api/users/role-options')

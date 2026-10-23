@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DatabaseBackup,
   Download,
   HardDrive,
   HardDriveDownload,
+  ImageIcon,
   Save,
   ShieldCheck,
   Store,
@@ -33,6 +34,7 @@ interface SettingsFormState {
   workshopName: string;
   workshopAddress: string;
   workshopPhone: string;
+  workshopLogo: string;
   idleTimeoutMinutes: string;
   maxFailedLogins: string;
   lockoutMinutes: string;
@@ -44,12 +46,54 @@ const EMPTY_FORM: SettingsFormState = {
   workshopName: '',
   workshopAddress: '',
   workshopPhone: '',
+  workshopLogo: '',
   idleTimeoutMinutes: '10',
   maxFailedLogins: '5',
   lockoutMinutes: '15',
   sessionDays: '7',
   backupRetentionCount: '14',
 };
+
+const LOGO_MAX_DATA_URL = 70000;
+
+function resizeLogo(file: File): Promise<string> {
+  if (!file.type.match(/^image\/(png|jpeg|webp)$/)) {
+    return Promise.reject(new Error('لوگو باید تصویر PNG، JPEG یا WebP باشد.'));
+  }
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+    image.onload = () => {
+      const size = 256;
+      const scale = Math.min(1, size / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('پردازش تصویر لوگو در مرورگر ممکن نشد.'));
+        return;
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      let dataUrl = canvas.toDataURL('image/png');
+      if (dataUrl.length > LOGO_MAX_DATA_URL) {
+        dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      }
+      URL.revokeObjectURL(objectUrl);
+      if (dataUrl.length > LOGO_MAX_DATA_URL) {
+        reject(new Error('حجم لوگو زیاد است؛ تصویری ساده‌تر با ابعاد کوچک‌تر انتخاب کنید.'));
+        return;
+      }
+      resolve(dataUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('تصویر لوگو قابل خواندن نیست.'));
+    };
+    image.src = objectUrl;
+  });
+}
 
 export function SettingsPage() {
   const { can } = usePermissions();
@@ -62,6 +106,7 @@ export function SettingsPage() {
   const settingsQuery = useApiQuery<AppSettings>(() => api.get<AppSettings>('/api/settings'), []);
   const [form, setForm] = useState<SettingsFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const logoInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!settingsQuery.data) return;
@@ -70,6 +115,7 @@ export function SettingsPage() {
       workshopName: data.workshop.name,
       workshopAddress: data.workshop.address,
       workshopPhone: data.workshop.phone,
+      workshopLogo: data.workshop.logo,
       idleTimeoutMinutes: String(data.security.idleTimeoutMinutes),
       maxFailedLogins: String(data.security.maxFailedLogins),
       lockoutMinutes: String(data.security.lockoutMinutes),
@@ -80,6 +126,17 @@ export function SettingsPage() {
 
   function update<K extends keyof SettingsFormState>(field: K, value: string) {
     setForm((previous) => ({ ...previous, [field]: value }));
+  }
+
+  async function handleLogoChange(file: File | undefined) {
+    if (!file) return;
+    try {
+      const logo = await resizeLogo(file);
+      update('workshopLogo', logo);
+      toast.success('لوگو انتخاب شد؛ با ذخیره تنظیمات اعمال می‌شود.');
+    } catch (error) {
+      toast.error(errorMessage(error));
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -107,6 +164,7 @@ export function SettingsPage() {
         workshopName: form.workshopName.trim(),
         workshopAddress: form.workshopAddress.trim(),
         workshopPhone: form.workshopPhone.trim(),
+        workshopLogo: form.workshopLogo,
         idleTimeoutMinutes: Number(form.idleTimeoutMinutes),
         maxFailedLogins: Number(form.maxFailedLogins),
         lockoutMinutes: Number(form.lockoutMinutes),
@@ -187,6 +245,59 @@ export function SettingsPage() {
                     disabled={!canManage}
                     placeholder="نشانی کارگاه"
                   />
+                </div>
+                <div>
+                  <Label>لوگوی تعمیرگاه</Label>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                    {form.workshopLogo ? (
+                      <img
+                        src={form.workshopLogo}
+                        alt="لوگوی تعمیرگاه"
+                        className="size-14 rounded-xl border border-ink-200 bg-white object-contain p-1"
+                      />
+                    ) : (
+                      <span className="flex size-14 items-center justify-center rounded-xl border border-dashed border-ink-200 bg-ink-50 text-ink-400">
+                        <ImageIcon className="size-5" />
+                      </span>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        ref={logoInput}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        disabled={!canManage}
+                        onChange={(event) => {
+                          void handleLogoChange(event.target.files?.[0]);
+                          event.target.value = '';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!canManage}
+                        onClick={() => logoInput.current?.click()}
+                      >
+                        انتخاب تصویر
+                      </Button>
+                      {form.workshopLogo ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={!canManage}
+                          onClick={() => update('workshopLogo', '')}
+                        >
+                          حذف لوگو
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <FieldHint>
+                    PNG، JPEG یا WebP؛ تصویر به‌صورت خودکار کوچک می‌شود و در سربرگ گزارش PDF و چاپ
+                    استفاده خواهد شد.
+                  </FieldHint>
                 </div>
               </CardContent>
             </Card>

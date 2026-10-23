@@ -28,7 +28,7 @@ const options: AnalyticsOptions = {
   years: [{ value: 1405, label: '۱۴۰۵' }],
   currentYear: 1405,
   currentMonth: 7,
-  workshop: { name: 'تعمیرگاه نمونه', phone: '', address: '' },
+  workshop: { name: 'تعمیرگاه نمونه', phone: '', address: '', logo: '' },
 };
 
 const runResult: ReportRunResult = {

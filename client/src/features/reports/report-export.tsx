@@ -71,6 +71,26 @@ function chunk<T>(items: T[], size: number): T[][] {
   return output;
 }
 
+function WorkshopLogo({ src, size = 54, alt }: { src?: string; size?: number; alt: string }) {
+  if (!src) return <BrandMark size={size} />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      style={{
+        width: size,
+        height: size,
+        objectFit: 'contain',
+        flexShrink: 0,
+        borderRadius: 12,
+        border: `1px solid ${COLORS.border}`,
+        background: COLORS.white,
+        padding: 3,
+      }}
+    />
+  );
+}
+
 function BrandMark({ size = 54 }: { size?: number }) {
   return (
     <div
@@ -174,6 +194,7 @@ export const ReportPdfDocument = forwardRef<HTMLDivElement, ReportPdfDocumentPro
     const tablePages = chunk(report.table.rows, 16);
     const totalPages = 1 + chartPages.length + tablePages.length;
     const workshop = report.workshop.name || 'تعمیرگاه';
+    const logo = report.workshop.logo;
     const generated = report.generatedAt;
 
     return (
@@ -195,7 +216,7 @@ export const ReportPdfDocument = forwardRef<HTMLDivElement, ReportPdfDocumentPro
           <div style={{ height: 5, background: COLORS.brand, margin: '-34px -38px 24px' }} />
           <div style={HEADER_ROW}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <BrandMark />
+              <WorkshopLogo src={logo} alt={`لوگوی ${workshop}`} />
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800 }}>{workshop}</div>
                 <div style={{ ...MUTED, fontSize: 10 }}>
@@ -293,7 +314,7 @@ export const ReportPdfDocument = forwardRef<HTMLDivElement, ReportPdfDocumentPro
           <section key={`charts-${pageIndex}`} data-pdf-page style={PAGE}>
             <div style={HEADER_ROW}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <BrandMark size={36} />
+                <WorkshopLogo src={logo} size={36} alt={`لوگوی ${workshop}`} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 800 }}>{title}</div>
                   <div style={{ ...MUTED, fontSize: 9 }}>{workshop} — نمودارها</div>
@@ -365,7 +386,7 @@ export const ReportPdfDocument = forwardRef<HTMLDivElement, ReportPdfDocumentPro
           <section key={`table-${pageIndex}`} data-pdf-page style={PAGE}>
             <div style={HEADER_ROW}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <BrandMark size={36} />
+                <WorkshopLogo src={logo} size={36} alt={`لوگوی ${workshop}`} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 800 }}>جدول داده‌های گزارش</div>
                   <div style={{ ...MUTED, fontSize: 9 }}>{workshop}</div>

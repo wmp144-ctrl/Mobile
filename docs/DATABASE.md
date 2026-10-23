@@ -1,4 +1,4 @@
-# طراحی پایگاه داده — مراحل ۱ تا ۳
+# طراحی پایگاه داده — مراحل ۱ تا ۴
 
 پایگاه داده: PostgreSQL ۱۸ (سازگار با ۱۵ به بعد)
 کدگذاری: UTF-8
@@ -35,6 +35,9 @@
 
   storage_locations 1 ──── n device_files  (مسیر مرجع، مسیر کلاینتی، وضعیت دسترسی)
   storage_open_tickets ← بلیت یک‌بارمصرف بازکردن پوشه برای برنامه کمکی
+
+  users 1 ──── n saved_reports  (قالب‌های گزارش شخصی/مشترک، config از نوع JSONB)
+  توابع گزارش‌گیری: ir_jalali_year / ir_jalali_month / ir_jalali_ym
 ```
 
 ## جداول
@@ -287,6 +290,31 @@
 | is_system | boolean | گزینه پیش‌فرض |
 | created_at / updated_at | timestamptz | زمان‌ها |
 
+### `saved_reports`
+| ستون | نوع | توضیح |
+| --- | --- | --- |
+| id | uuid PK | شناسه |
+| name / description | text | نام و توضیح قالب گزارش |
+| config | jsonb | فیلترها، نمودارها (نوع، شاخص، گروه‌بندی و ترتیب)، ستون‌های جدول و محدودیت ردیف |
+| is_shared | boolean | نمایش برای همه کاربران یا فقط سازنده |
+| version | integer | کنترل تداخل ویرایش قالب |
+| created_by / updated_by | uuid FK → users | سازنده و آخرین ویرایش‌کننده |
+| created_at / updated_at / deleted_at | timestamptz | زمان ساخت، ویرایش و حذف نرم |
+
+### توابع تقویم شمسی
+
+مهاجرت `005_reporting.sql` چهار تابع پایدار در PostgreSQL تعریف می‌کند:
+
+| تابع | خروجی | کاربرد |
+| --- | --- | --- |
+| `ir_jalali_from_gregorian(gy, gm, gd)` | سال، ماه و روز شمسی | تبدیل تقویم در SQL |
+| `ir_jalali_year(ts)` | عدد سال شمسی | مقایسه و گروه‌بندی سالانه |
+| `ir_jalali_month(ts)` | عدد ماه شمسی (۱ تا ۱۲) | فیلتر و گروه‌بندی ماهانه |
+| `ir_jalali_ym(ts)` | کلید `YYYY-MM` شمسی | روند ماهانه پیوسته |
+
+این توابع از منطقه زمانی `Asia/Tehran` استفاده می‌کنند تا گروه‌بندی گزارش‌ها به ساعت و
+تقویم مرورگر وابسته نباشد.
+
 ## مهاجرت‌ها
 
 | فایل | محتوا |
@@ -295,13 +323,14 @@
 | `002_seed_system_roles.sql` | تعریف نقش‌های سیستمی و مجوزهای پیش‌فرض |
 | `003_customers_devices.sql` | مشتریان، تجهیزات، تاریخچه وضعیت، اقدامات، فایل‌ها، تصاویر، یادداشت‌ها، تعریف فیلدها و فهرست گزینه‌ها |
 | `004_storage_files.sql` | محل‌های ذخیره‌سازی، متادیتای فایل و بلیت بازکردن پوشه، تنظیمات پوشه و مجوز `files.view` |
+| `005_reporting.sql` | توابع تقویم شمسی در PostgreSQL، جدول `saved_reports` و مجوز `reports.manage` |
 
 ## مجوزهای تعریف‌شده
 
 `dashboard.view`، `users.view`، `users.manage`، `roles.view`، `roles.manage`، `settings.view`،
 `settings.manage`، `audit.view`، `backups.manage`، `customers.view/manage`، `repairs.view/manage`،
-`files.view`، `files.manage` و مجوزهای آینده: `inventory.view/manage`، `invoices.view/manage`،
-`reports.view`.
+`files.view`، `files.manage`، `reports.view`، `reports.manage` و مجوزهای آینده:
+`inventory.view/manage`، `invoices.view/manage`.
 
 نقش‌های پیش‌فرض: مدیر کل (`*`)، سرپرست تعمیرات، تکنسین، پذیرش، انباردار. ساخت نقش سفارشی با
 انتخاب مجوزها نیز پشتیبانی می‌شود.

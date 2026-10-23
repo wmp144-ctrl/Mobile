@@ -31,6 +31,14 @@ export class UpdateSettingsDto {
   workshopPhone?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(70000, { message: 'حجم لوگو حداکثر ۵۰ کیلوبایت است.' })
+  @Matches(/^(|data:image\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/]+={0,2})$/, {
+    message: 'لوگو باید تصویر PNG، JPEG یا WebP باشد.',
+  })
+  workshopLogo?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'مدت قفل خودکار باید عدد صحیح باشد.' })
   @Min(2, { message: 'مدت قفل خودکار حداقل ۲ دقیقه است.' })

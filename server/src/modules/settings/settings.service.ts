@@ -9,6 +9,7 @@ export interface WorkshopSettings {
   name: string;
   address: string;
   phone: string;
+  logo: string;
 }
 
 export interface SecuritySettings {
@@ -41,7 +42,7 @@ export interface FullSettings {
   storage: StorageSettings;
 }
 
-const DEFAULT_WORKSHOP: WorkshopSettings = { name: '', address: '', phone: '' };
+const DEFAULT_WORKSHOP: WorkshopSettings = { name: '', address: '', phone: '', logo: '' };
 const DEFAULT_SECURITY: SecuritySettings = {
   idleTimeoutMinutes: 10,
   maxFailedLogins: 5,
@@ -83,6 +84,7 @@ export class SettingsService {
         name: str('workshop.name', DEFAULT_WORKSHOP.name),
         address: str('workshop.address', DEFAULT_WORKSHOP.address),
         phone: str('workshop.phone', DEFAULT_WORKSHOP.phone),
+        logo: str('workshop.logo', DEFAULT_WORKSHOP.logo),
       },
       security: {
         idleTimeoutMinutes: num('security.idleTimeoutMinutes', DEFAULT_SECURITY.idleTimeoutMinutes),
@@ -119,6 +121,7 @@ export class SettingsService {
     if (dto.workshopName !== undefined) entries.push(['workshop.name', dto.workshopName.trim()]);
     if (dto.workshopAddress !== undefined) entries.push(['workshop.address', dto.workshopAddress.trim()]);
     if (dto.workshopPhone !== undefined) entries.push(['workshop.phone', dto.workshopPhone.trim()]);
+    if (dto.workshopLogo !== undefined) entries.push(['workshop.logo', dto.workshopLogo.trim()]);
     if (dto.idleTimeoutMinutes !== undefined) entries.push(['security.idleTimeoutMinutes', dto.idleTimeoutMinutes]);
     if (dto.maxFailedLogins !== undefined) entries.push(['security.maxFailedLogins', dto.maxFailedLogins]);
     if (dto.lockoutMinutes !== undefined) entries.push(['security.lockoutMinutes', dto.lockoutMinutes]);
