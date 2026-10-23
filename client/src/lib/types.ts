@@ -451,3 +451,175 @@ export interface AuthPayload {
   expiresIn: number;
   user: PublicUser;
 }
+
+/* ---------- داشبورد تحلیلی و گزارش‌گیری پیشرفته (مرحله ۴) ---------- */
+
+export type ReportDimension =
+  | 'equipmentType'
+  | 'manufacturer'
+  | 'model'
+  | 'status'
+  | 'job'
+  | 'technician'
+  | 'month'
+  | 'year'
+  | 'operationType'
+  | 'customer';
+
+export type ReportMetric =
+  | 'count'
+  | 'delivered'
+  | 'failed'
+  | 'active'
+  | 'customers'
+  | 'operations';
+
+export type ReportChartType =
+  | 'bar'
+  | 'line'
+  | 'pie'
+  | 'doughnut'
+  | 'area'
+  | 'stackedBar'
+  | 'combo';
+
+export type ReportTableColumn =
+  | 'intakeCode'
+  | 'ownerName'
+  | 'ownerPhone'
+  | 'job'
+  | 'equipmentType'
+  | 'manufacturer'
+  | 'model'
+  | 'status'
+  | 'technician'
+  | 'receivedAt'
+  | 'dueAt'
+  | 'deliveredAt'
+  | 'operationCount'
+  | 'reportedProblem';
+
+export interface AnalyticsFilter {
+  from?: string;
+  to?: string;
+  year?: number;
+  month?: number;
+  equipmentType?: string;
+  manufacturer?: string;
+  model?: string;
+  job?: string;
+  technicianId?: string;
+  status?: string;
+  operationType?: string;
+}
+
+export interface ReportChartConfig {
+  id: string;
+  title?: string;
+  dimension: ReportDimension;
+  metric: ReportMetric;
+  chartType: ReportChartType;
+}
+
+export interface ReportConfig extends AnalyticsFilter {
+  charts: ReportChartConfig[];
+  tableColumns?: ReportTableColumn[];
+  tableLimit?: number;
+}
+
+export interface ReportChartSeries {
+  name: string;
+  data: number[];
+}
+
+export interface ReportChartResult {
+  id: string;
+  title: string;
+  chartType: ReportChartType;
+  dimension: ReportDimension;
+  metric: ReportMetric;
+  categories: string[];
+  series: ReportChartSeries[];
+  total: number;
+  horizontal?: boolean;
+}
+
+export interface ReportTableColumnResult {
+  key: string;
+  label: string;
+  type: 'text' | 'date' | 'number' | 'status';
+}
+
+export interface ReportTableResult {
+  columns: ReportTableColumnResult[];
+  rows: Record<string, string | number | null>[];
+  total: number;
+}
+
+export interface ReportRunResult {
+  charts: ReportChartResult[];
+  table: ReportTableResult;
+  generatedAt: string;
+  filters: AnalyticsFilter;
+  workshop: { name: string; phone: string; address: string };
+}
+
+export interface DashboardStats {
+  totalEquipment: number;
+  receivedToday: number;
+  inProgress: number;
+  done: number;
+  failed: number;
+  ready: number;
+  delivered: number;
+  customers: number;
+}
+
+export interface AnalyticsDashboard {
+  stats: DashboardStats;
+  charts: {
+    equipmentTypes: ReportChartResult;
+    manufacturers: ReportChartResult;
+    monthlyTrend: ReportChartResult;
+    yearly: ReportChartResult;
+    jobs: ReportChartResult;
+    statuses: ReportChartResult;
+  };
+  recentDevices: ReportTableResult;
+  generatedAt: string;
+  workshop: { name: string; phone: string; address: string };
+  currentUser: { fullName: string; roleNameFa: string };
+}
+
+export interface AnalyticsOptionItem {
+  value: string;
+  label: string;
+  count?: number;
+}
+
+export interface AnalyticsOptions {
+  equipmentTypes: AnalyticsOptionItem[];
+  manufacturers: AnalyticsOptionItem[];
+  models: string[];
+  jobs: string[];
+  technicians: { value: string; label: string }[];
+  operationTypes: AnalyticsOptionItem[];
+  statuses: { value: string; label: string; tone: string }[];
+  years: { value: number; label: string }[];
+  currentYear: number;
+  currentMonth: number;
+  workshop: { name: string; phone: string; address: string };
+}
+
+export interface SavedReport {
+  id: string;
+  name: string;
+  description: string | null;
+  config: ReportConfig;
+  isShared: boolean;
+  version: number;
+  ownerName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  canManage: boolean;
+}

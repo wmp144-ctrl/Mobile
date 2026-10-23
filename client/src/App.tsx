@@ -19,6 +19,7 @@ import { DevicePrintPage } from '@/features/devices/device-print-page';
 import { DevicesPrintPage } from '@/features/devices/devices-print-page';
 import { CustomersPage } from '@/features/customers/customers-page';
 import { StoragePage } from '@/features/storage/storage-page';
+import { ReportsPage } from '@/features/reports/reports-page';
 import { NotFoundPage } from '@/features/not-found-page';
 
 export function App() {
@@ -41,6 +42,7 @@ export function App() {
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="devices/:id/edit" element={<DeviceFormPage />} />
             <Route path="customers" element={<CustomersPage />} />
+            <Route path="reports" element={<ReportsPage />} />
             <Route path="storage" element={<StoragePage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="roles" element={<RolesPage />} />

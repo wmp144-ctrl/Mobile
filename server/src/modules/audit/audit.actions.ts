@@ -50,6 +50,10 @@ export const AUDIT_ACTIONS = {
   STORAGE_FOLDER_FAILED: 'storage.folder_failed',
   STORAGE_FILE_CHECKED: 'storage.file_checked',
   STORAGE_OPEN_REQUESTED: 'storage.open_requested',
+  REPORT_SAVED_CREATED: 'report.saved_created',
+  REPORT_SAVED_UPDATED: 'report.saved_updated',
+  REPORT_SAVED_DELETED: 'report.saved_deleted',
+  REPORT_EXPORTED: 'report.exported',
 } as const;
 
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
@@ -104,6 +108,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   [AUDIT_ACTIONS.STORAGE_FOLDER_FAILED]: 'خطا در ساخت پوشه دستگاه',
   [AUDIT_ACTIONS.STORAGE_FILE_CHECKED]: 'بررسی دسترسی مسیر فایل',
   [AUDIT_ACTIONS.STORAGE_OPEN_REQUESTED]: 'درخواست بازکردن پوشه',
+  [AUDIT_ACTIONS.REPORT_SAVED_CREATED]: 'ذخیره قالب گزارش',
+  [AUDIT_ACTIONS.REPORT_SAVED_UPDATED]: 'ویرایش قالب گزارش',
+  [AUDIT_ACTIONS.REPORT_SAVED_DELETED]: 'حذف قالب گزارش',
+  [AUDIT_ACTIONS.REPORT_EXPORTED]: 'خروجی گزارش',
 };
 
 export function auditActionLabel(action: string): string {

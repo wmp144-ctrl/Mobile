@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   INVOICES_VIEW: 'invoices.view',
   INVOICES_MANAGE: 'invoices.manage',
   REPORTS_VIEW: 'reports.view',
+  REPORTS_MANAGE: 'reports.manage',
   FILES_VIEW: 'files.view',
   FILES_MANAGE: 'files.manage',
 } as const;
@@ -49,7 +50,8 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
   { key: PERMISSIONS.INVENTORY_MANAGE, label: 'مدیریت انبار', group: 'انبار', future: true },
   { key: PERMISSIONS.INVOICES_VIEW, label: 'مشاهده فاکتورها', group: 'مالی', future: true },
   { key: PERMISSIONS.INVOICES_MANAGE, label: 'صدور و ویرایش فاکتور', group: 'مالی', future: true },
-  { key: PERMISSIONS.REPORTS_VIEW, label: 'مشاهده گزارش‌ها', group: 'گزارش‌ها', future: true },
+  { key: PERMISSIONS.REPORTS_VIEW, label: 'مشاهده داشبورد تحلیلی و گزارش‌ها', group: 'گزارش‌ها' },
+  { key: PERMISSIONS.REPORTS_MANAGE, label: 'ساخت و ویرایش قالب‌های گزارش', group: 'گزارش‌ها' },
   { key: PERMISSIONS.FILES_VIEW, label: 'مشاهده محل‌های ذخیره‌سازی و فایل‌ها', group: 'فایل‌ها' },
   { key: PERMISSIONS.FILES_MANAGE, label: 'مدیریت فایل‌ها، مسیرها و محل‌های ذخیره‌سازی', group: 'فایل‌ها' },
 ];

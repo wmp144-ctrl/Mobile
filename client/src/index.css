@@ -72,6 +72,15 @@
   scrollbar-color: var(--color-ink-300) transparent;
 }
 
+/* سند PDF خارج از صفحه است؛ رنگ‌های شش‌رقمی صریح برای سازگاری html2canvas
+   (که رنگ‌های oklch تیلویند ۴ را پشتیبانی نمی‌کند) اعمال می‌شوند. */
+.pdf-report-root,
+.pdf-report-root * {
+  border-color: #d9dde9 !important;
+  outline-color: transparent !important;
+  text-decoration-color: currentColor !important;
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;

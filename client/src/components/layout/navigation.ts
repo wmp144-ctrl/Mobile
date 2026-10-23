@@ -1,4 +1,5 @@
 import {
+  ChartNoAxesCombined,
   ContactRound,
   HardDrive,
   History,
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'داشبورد', icon: LayoutDashboard, permission: 'dashboard.view', end: true },
   { path: '/devices', label: 'تجهیزات و تعمیرات', icon: Smartphone, permission: 'repairs.view' },
   { path: '/customers', label: 'مشتریان', icon: ContactRound, permission: 'customers.view' },
+  { path: '/reports', label: 'گزارش‌گیری پیشرفته', icon: ChartNoAxesCombined, permission: 'reports.view' },
   { path: '/storage', label: 'فایل و بکاپ', icon: HardDrive, permission: 'files.view' },
   { path: '/users', label: 'کاربران', icon: Users, permission: 'users.view' },
   { path: '/roles', label: 'نقش‌ها و دسترسی‌ها', icon: ShieldCheck, permission: 'roles.view' },

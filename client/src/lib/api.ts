@@ -135,6 +135,39 @@ export const api = {
   },
 };
 
+export async function downloadPostFile(
+  path: string,
+  fileName: string,
+  body: unknown,
+): Promise<void> {
+  const response = await fetch(path, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(api.token ? { Authorization: `Bearer ${api.token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const payload = (await parseJson(response)) as ErrorPayload | null;
+    throw new ApiError(
+      response.status,
+      payload?.code ?? 'HTTP_ERROR',
+      messageFrom(payload, 'دریافت فایل ناموفق بود.'),
+    );
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function downloadFile(path: string, fileName: string): Promise<void> {
   const response = await fetch(path, {
     credentials: 'include',

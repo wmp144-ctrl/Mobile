@@ -254,6 +254,71 @@ check(
 );
 await exportResponse.arrayBuffer();
 
+const reportOptions = await call('/api/reports/options', { token });
+check(
+  reportOptions.status === 200 && reportOptions.body.equipmentTypes.length > 0 && reportOptions.body.years.length > 0,
+  'گزینه‌های فیلتر گزارش‌گیری در دسترس است',
+);
+
+const dashboardFilters = await call(
+  '/api/analytics/dashboard?equipmentType=mobile&manufacturer=samsung&status=ready_delivery',
+  { token },
+);
+check(
+  dashboardFilters.status === 200 &&
+    dashboardFilters.body.stats.totalEquipment === 1 &&
+    dashboardFilters.body.charts.equipmentTypes.total === 1,
+  'داشبورد تحلیلی با فیلترهای ترکیبی محاسبه شد',
+);
+
+const reportConfig = {
+  equipmentType: 'mobile',
+  manufacturer: 'samsung',
+  charts: [
+    { id: 'smoke-1', dimension: 'equipmentType', metric: 'count', chartType: 'doughnut' },
+    { id: 'smoke-2', dimension: 'month', metric: 'count', chartType: 'line' },
+    { id: 'smoke-3', dimension: 'status', metric: 'count', chartType: 'stackedBar' },
+  ],
+  tableColumns: ['intakeCode', 'ownerName', 'status', 'receivedAt'],
+};
+const reportRun = await call('/api/reports/run', { method: 'POST', token, body: reportConfig });
+check(
+  reportRun.status === 201 &&
+    reportRun.body.charts.length === 3 &&
+    reportRun.body.table.rows.some((row) => row.intakeCode === device.body.intakeCode),
+  'گزارش پیشرفته چندنموداری با جدول داده اجرا شد',
+);
+
+const savedReport = await call('/api/reports/saved', {
+  method: 'POST',
+  token,
+  body: { name: 'قالب آزمون دود', isShared: true, config: reportConfig },
+});
+check(savedReport.status === 201, 'قالب گزارش ذخیره شد');
+const rerun = await call(`/api/reports/saved/${savedReport.body.id}/run`, {
+  method: 'POST',
+  token,
+});
+check(rerun.status === 201 && rerun.body.charts.length === 3, 'قالب گزارش ذخیره‌شده مجدداً اجرا شد');
+await call(`/api/reports/saved/${savedReport.body.id}`, { method: 'DELETE', token });
+
+const csvResponse = await fetch(`${BASE}/api/reports/export/csv`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  body: JSON.stringify(reportConfig),
+});
+const csvText = await csvResponse.text();
+check(
+  csvResponse.status === 201 &&
+    (csvResponse.headers.get('content-type') ?? '').includes('text/csv') &&
+    csvText.includes(device.body.intakeCode),
+  'خروجی CSV گزارش با کد پذیرش تولید شد',
+);
+
 const audit = await call('/api/audit-logs?action=auth.login', { token });
 check(audit.status === 200 && audit.body.total >= 1, 'تاریخچه ورود قابل مشاهده است');
 
