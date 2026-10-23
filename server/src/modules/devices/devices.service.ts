@@ -5,7 +5,6 @@ import * as path from 'node:path';
 import ExcelJS from 'exceljs';
 import { APP_CONFIG, type AppConfig } from '../../config/configuration';
 import { AppException, ErrorCodes } from '../../common/errors/app.exception';
-import { findDeviceStatus } from '../../common/device-status';
 import { SecretBox } from '../../common/utils/crypto';
 import { addDays, jalaliYear } from '../../common/utils/jalali';
 import type { PageResult } from '../../common/utils/pagination';
@@ -253,6 +252,7 @@ export class DevicesService {
     if (!existing) {
       throw new AppException(ErrorCodes.NOT_FOUND, 'پرونده دستگاه پیدا نشد.', HttpStatus.NOT_FOUND);
     }
+    await this.config.assertStatus(dto.status);
     if (existing.status === dto.status) {
       throw new AppException(
         ErrorCodes.VALIDATION_ERROR,
@@ -276,7 +276,7 @@ export class DevicesService {
       );
     }
 
-    const toLabel = findDeviceStatus(dto.status)?.label ?? dto.status;
+    const toLabel = await this.config.statusLabel(dto.status);
     await this.audit.log({
       actor,
       action: AUDIT_ACTIONS.DEVICE_STATUS_CHANGED,
@@ -320,13 +320,7 @@ export class DevicesService {
     const existing = await this.requireDevice(id);
     await this.config.assertOption('operation_type', dto.operationType);
     if (dto.technicianId) await this.assertTechnician(dto.technicianId);
-    if (dto.deviceStatusAfter && !findDeviceStatus(dto.deviceStatusAfter)) {
-      throw new AppException(
-        ErrorCodes.VALIDATION_ERROR,
-        'وضعیت نهایی انتخاب‌شده معتبر نیست.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    if (dto.deviceStatusAfter) await this.config.assertStatus(dto.deviceStatusAfter);
     const performedAt = dto.performedAt ? new Date(dto.performedAt) : new Date();
     const input: OperationInput = {
       operationType: dto.operationType,
@@ -362,9 +356,9 @@ export class DevicesService {
         action: AUDIT_ACTIONS.DEVICE_STATUS_CHANGED,
         entityType: 'device',
         entityId: id,
-        description: `وضعیت پرونده ${existing.intake_code} پس از اقدام «${input.title}» به «${
-          findDeviceStatus(input.deviceStatusAfter)?.label ?? input.deviceStatusAfter
-        }» تغییر کرد.`,
+        description: `وضعیت پرونده ${existing.intake_code} پس از اقدام «${input.title}» به «${await this.config.statusLabel(
+          input.deviceStatusAfter,
+        )}» تغییر کرد.`,
         metadata: { from: existing.status, to: input.deviceStatusAfter },
       });
     }

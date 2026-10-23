@@ -248,6 +248,79 @@ check(
   'تنظیمات فیلدها و فهرست‌ها در دسترس است',
 );
 
+const customStatus = await call('/api/device-config/options', {
+  method: 'POST',
+  token,
+  body: { category: 'device_status', labelFa: 'در انتظار تست نهایی' },
+});
+check(
+  customStatus.status === 201 && customStatus.body.isSystem === false && customStatus.body.key.startsWith('c_'),
+  'وضعیت سفارشی جدید توسط مدیر تعریف شد',
+);
+
+const statusList = await call('/api/device-config/statuses', { token });
+check(
+  statusList.status === 200 &&
+    statusList.body.length === 13 &&
+    statusList.body.some((item) => item.key === customStatus.body.key && item.label === 'در انتظار تست نهایی'),
+  'وضعیت سفارشی در فهرست وضعیت‌های دستگاه قرار گرفت',
+);
+
+const secondDevice = await call('/api/devices', {
+  method: 'POST',
+  token,
+  body: {
+    ...devicePayload,
+    equipmentType: 'laptop',
+    model: 'IdeaPad Smoke',
+    serialNumber: 'SN-SMOKE-2',
+    imei1: '356789012345679',
+    reportedProblem: 'روشن نمی‌شود.',
+  },
+});
+check(secondDevice.status === 201, 'دستگاه دوم برای آزمون وضعیت سفارشی پذیرش شد');
+
+const customStatusChange = await call(`/api/devices/${secondDevice.body.id}/status`, {
+  method: 'PATCH',
+  token,
+  body: { status: customStatus.body.key, note: 'وضعیت سفارشی در آزمون دود' },
+});
+check(
+  customStatusChange.status === 200 &&
+    customStatusChange.body.status.label === 'در انتظار تست نهایی' &&
+    customStatusChange.body.statusHistory[0].toStatus.label === 'در انتظار تست نهایی',
+  'وضعیت سفارشی با برچسب صحیح در پرونده و تاریخچه ثبت شد',
+);
+
+const customStatusFilter = await call(`/api/devices?status=${customStatus.body.key}`, { token });
+check(
+  customStatusFilter.status === 200 && customStatusFilter.body.total === 1,
+  'فیلتر فهرست تجهیزات با وضعیت سفارشی کار می‌کند',
+);
+
+const customerDevices = await call(`/api/customers/${customer.body.id}/devices`, { token });
+check(
+  customerDevices.status === 200 &&
+    customerDevices.body.length === 2 &&
+    customerDevices.body.some((item) => item.status.label === 'در انتظار تست نهایی'),
+  'سوابق هر دو دستگاه از پرونده مشتری قابل مشاهده است',
+);
+
+const customStatusReport = await call('/api/reports/run', {
+  method: 'POST',
+  token,
+  body: {
+    charts: [{ id: 'custom-status', dimension: 'status', metric: 'count', chartType: 'bar' }],
+    tableColumns: ['intakeCode', 'status'],
+  },
+});
+check(
+  customStatusReport.status === 201 &&
+    customStatusReport.body.charts[0].categories.includes('در انتظار تست نهایی') &&
+    customStatusReport.body.table.rows.some((row) => row.status === 'در انتظار تست نهایی'),
+  'وضعیت سفارشی در نمودار و جدول گزارش ظاهر شد',
+);
+
 const exportResponse = await fetch(`${BASE}/api/devices/export?search=SMOKE`, {
   headers: { Authorization: `Bearer ${token}` },
 });
@@ -409,5 +482,29 @@ check(afterLogout.status === 401, 'توکن پس از خروج باطل شده �
 
 const health = await call('/api/health');
 check(health.status === 200 && health.body.database === 'up', 'پایگاه داده سالم است');
+
+const clientSessions = await Promise.all(
+  Array.from({ length: 5 }, async (_, index) => {
+    const session = await call('/api/auth/login', {
+      method: 'POST',
+      body: { username: ADMIN.username, password: ADMIN.password },
+    });
+    const profile = await call('/api/auth/me', { token: session.body.accessToken });
+    const list = await call('/api/devices?page=1&pageSize=10', {
+      token: session.body.accessToken,
+    });
+    return { index, session, profile, list };
+  }),
+);
+check(
+  clientSessions.every(
+    (item) =>
+      item.session.status === 200 &&
+      item.profile.status === 200 &&
+      item.list.status === 200 &&
+      item.list.body.total >= 2,
+  ),
+  'پنج کلاینت هم‌زمان به سرور، نشست و پایگاه داده دسترسی داشتند',
+);
 
 console.log(`\nنتیجه: ${passed} بررسی موفق.`);

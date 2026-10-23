@@ -40,6 +40,12 @@ export class CustomersController {
     return this.customers.getById(id);
   }
 
+  @Get(':id/devices')
+  @RequirePermissions(PERMISSIONS.CUSTOMERS_VIEW)
+  devices(@Param('id', uuidPipe) id: string) {
+    return this.customers.devices(id);
+  }
+
   @Post()
   @RequirePermissions(PERMISSIONS.CUSTOMERS_MANAGE)
   create(@Body() dto: CreateCustomerDto, @CurrentUser() user: AuthUser) {

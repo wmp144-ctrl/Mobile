@@ -21,7 +21,7 @@ import { useApiQuery } from '@/lib/use-api';
 import { usePermissions } from '@/lib/use-permissions';
 import { formatJalaliDateTime, jalaliEndOfDayIso, jalaliStartOfDayIso } from '@/lib/jalali';
 import type { DeviceConfigData, DeviceSummary, Page } from '@/lib/types';
-import { DEVICE_STATUS_OPTIONS, statusBadgeVariant } from '@/lib/device-status';
+import { mergeDeviceStatuses, statusBadgeVariant } from '@/lib/device-status';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -168,6 +168,7 @@ export function DevicesPage() {
 
   const devices = devicesQuery.data?.items ?? [];
   const options = configQuery.data?.options;
+  const statusOptions = mergeDeviceStatuses(configQuery.data?.statuses);
   const activeFilterCount = [
     searchTerm,
     status,
@@ -270,7 +271,7 @@ export function DevicesPage() {
               aria-label="فیلتر وضعیت"
             >
               <option value="">همه وضعیت‌ها</option>
-              {DEVICE_STATUS_OPTIONS.map((item) => (
+              {statusOptions.map((item) => (
                 <option key={item.key} value={item.key}>
                   {item.label}
                 </option>

@@ -105,6 +105,7 @@
 | --- | --- | --- |
 | GET | `/api/customers?search=&page=&pageSize=` | فهرست صفحه‌بندی‌شده |
 | GET | `/api/customers/options` | گزینه‌های انتخاب مشتری |
+| GET | `/api/customers/:id/devices` | سوابق تمام دستگاه‌های مشتری (مجوز `customers.view`) |
 | GET/PATCH/DELETE | `/api/customers/:id` | جزئیات/ویرایش/حذف نرم |
 | POST | `/api/customers` | ایجاد |
 
@@ -132,7 +133,8 @@
 
 | متد | مسیر | مجوز |
 | --- | --- | --- |
-| GET | `/api/device-config` | `repairs.view` |
+| GET | `/api/device-config` | `repairs.view` — فیلدها، فهرست‌ها، وضعیت‌ها و تکنسین‌ها |
+| GET | `/api/device-config/statuses` | `repairs.view` — وضعیت‌های فعال دستگاه |
 | POST | `/api/device-config/fields` | `settings.manage` |
 | PATCH/DELETE | `/api/device-config/fields/:id` | `settings.manage` |
 | POST | `/api/device-config/options` | `settings.manage` |
@@ -153,6 +155,22 @@
 
 `fieldType`: `text | textarea | number | amount | date | datetime | select | multi_select |
 checkbox | file | password`. برای فیلدهای انتخابی، آرایه `options: [{value,label}]` لازم است.
+
+### وضعیت‌های دستگاه
+
+دسته `device_status` در همان endpoint فهرست‌ها مدیریت می‌شود:
+
+```json
+{ "category": "device_status", "labelFa": "در انتظار قطعه خاص" }
+```
+
+- ۱۲ وضعیت پیش‌فرض سامانه (`received`، `in_progress`، `delivered` و …) در پایگاه داده Seed شده‌اند،
+  برچسبشان قابل ویرایش است اما غیرفعال یا حذف نمی‌شوند.
+- وضعیت سفارشی کلید `c_<hex>` می‌گیرد، در `POST/PATCH /api/devices/:id/status` و فیلتر
+  `GET /api/devices?status=` پذیرفته می‌شود و در داشبورد، گزارش‌ها و تاریخچه با همان برچسب ظاهر می‌شود.
+- وضعیت سفارشی غیرفعال قابل انتخاب نیست؛ دستگاهی که قبلاً آن وضعیت را داشته، اطلاعات و تاریخچه
+  خود را حفظ می‌کند و فقط از فهرست انتخاب حذف می‌شود.
+- وضعیت سفارشی که هنوز دستگاهی با آن وجود دارد قابل حذف نیست (پاسخ `409 OPTION_IN_USE`).
 
 ## داشبورد و گزارش‌ها
 

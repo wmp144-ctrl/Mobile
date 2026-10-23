@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { DatabaseService } from '../../database/database.service';
-import { DEVICE_STATUSES } from '../../common/device-status';
+import { findDeviceStatus } from '../../common/device-status';
 import { AppException, ErrorCodes } from '../../common/errors/app.exception';
 import { hasPermission, PERMISSIONS } from '../../common/permissions';
 import {
@@ -91,6 +91,7 @@ export class AnalyticsService {
       recentDevices,
       workshop,
       monthly,
+      statusOptions,
     ] = await Promise.all([
       this.repo.stats(filter),
       this.repo.aggregateSingle(filter, 'equipmentType', 'count', 13),
@@ -105,6 +106,7 @@ export class AnalyticsService {
       ),
       this.settings.getAll(),
       this.monthlyTrend(filter),
+      this.repo.statusOptions(),
     ]);
 
     return {
@@ -144,7 +146,7 @@ export class AnalyticsService {
           jobRows,
           true,
         ),
-        statuses: this.statusChart(filter, statusRows),
+        statuses: this.statusChart(statusRows, statusOptions),
       },
       recentDevices,
       generatedAt: new Date().toISOString(),
@@ -164,6 +166,7 @@ export class AnalyticsService {
       years,
       customColumns,
       workshop,
+      statusOptions,
     ] = await Promise.all([
       this.repo.equipmentTypeOptions(),
       this.repo.manufacturerOptions(),
@@ -174,6 +177,7 @@ export class AnalyticsService {
       this.repo.yearOptions(),
       this.repo.reportableCustomColumns(),
       this.settings.getAll(),
+      this.repo.statusOptions(),
     ]);
     const now = jalaliParts(new Date());
     const currentYear = now?.jy ?? new Date().getFullYear() - 621;
@@ -186,10 +190,10 @@ export class AnalyticsService {
       jobs,
       technicians,
       operationTypes,
-      statuses: DEVICE_STATUSES.map((status) => ({
-        value: status.key,
+      statuses: statusOptions.map((status) => ({
+        value: status.value,
         label: status.label,
-        tone: status.tone,
+        tone: findDeviceStatus(status.value)?.tone ?? 'info',
       })),
       years: allYears.map((year) => ({ value: year, label: toPersianDigits(year) })),
       currentYear,
@@ -601,21 +605,26 @@ export class AnalyticsService {
   }
 
   private statusChart(
-    filter: AnalyticsFilter,
     rows: { label: string; value: number }[],
+    statusOptions: { value: string; label: string }[],
   ): ReportChartResult {
     const counts = new Map(rows.map((row) => [row.label, row.value]));
+    // وضعیت‌های سفارشی و وضعیت‌های غیرفعالی که هنوز دستگاه دارند نیز در نمودار می‌آیند.
+    const categories = statusOptions.map((status) => status.label);
+    for (const row of rows) {
+      if (!categories.includes(row.label)) categories.push(row.label);
+    }
     return {
       id: 'statuses',
       title: 'وضعیت تجهیزات',
       chartType: 'doughnut',
       dimension: 'status',
       metric: 'count',
-      categories: DEVICE_STATUSES.map((status) => status.label),
+      categories,
       series: [
         {
           name: 'تعداد تجهیزات',
-          data: DEVICE_STATUSES.map((status) => counts.get(status.key) ?? 0),
+          data: categories.map((label) => counts.get(label) ?? 0),
         },
       ],
       total: rows.reduce((sum, row) => sum + row.value, 0),
@@ -715,9 +724,6 @@ export class AnalyticsService {
   private displayCategory(dimension: ReportDimension, label: string): string {
     if (dimension === 'month') return jalaliMonthLabel(label);
     if (dimension === 'year') return toPersianDigits(label);
-    if (dimension === 'status') {
-      return DEVICE_STATUSES.find((status) => status.key === label)?.label ?? label;
-    }
     return label;
   }
 

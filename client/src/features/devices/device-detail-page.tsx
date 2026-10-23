@@ -26,7 +26,7 @@ import { useApiQuery } from '@/lib/use-api';
 import { usePermissions } from '@/lib/use-permissions';
 import { formatJalaliDate, formatJalaliDateTime } from '@/lib/jalali';
 import { formatBytes, formatNumber } from '@/lib/format';
-import { DEVICE_STATUS_OPTIONS, statusBadgeVariant } from '@/lib/device-status';
+import { mergeDeviceStatuses, statusBadgeVariant } from '@/lib/device-status';
 import {
   accessStatusLabel,
   accessStatusVariant,
@@ -194,6 +194,11 @@ export function DeviceDetailPage() {
     const map = new Map((configQuery.data?.options.accessory ?? []).map((item) => [item.key, item.label]));
     return (device?.accessories ?? []).map((key) => map.get(key) ?? key);
   }, [configQuery.data, device]);
+
+  const statusOptions = useMemo(
+    () => mergeDeviceStatuses(configQuery.data?.statuses),
+    [configQuery.data],
+  );
 
   const customFieldDefs = useMemo(
     () => (configQuery.data?.fields ?? []).filter((field) => !field.isSystem && field.isEnabled),
@@ -427,6 +432,17 @@ export function DeviceDetailPage() {
             <Printer className="size-4" />
             چاپ پرونده
           </Button>
+          {device.deliveredAt ? (
+            <Button
+              variant="outline"
+              onClick={() =>
+                window.open(`/devices/${device.id}/print?type=delivery`, '_blank', 'noopener')
+              }
+            >
+              <Printer className="size-4" />
+              رسید تحویل
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -590,7 +606,7 @@ export function DeviceDetailPage() {
                     <span className="absolute -start-[25px] top-1.5 size-3 rounded-full border-2 border-white bg-brand-500" />
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={statusBadgeVariant(
-                        DEVICE_STATUS_OPTIONS.find((item) => item.key === entry.toStatus.key)?.tone ?? 'neutral',
+                        statusOptions.find((item) => item.key === entry.toStatus.key)?.tone ?? 'neutral',
                       )}>
                         {entry.toStatus.label}
                       </Badge>
@@ -1122,6 +1138,7 @@ export function DeviceDetailPage() {
         open={statusOpen}
         onOpenChange={setStatusOpen}
         device={device}
+        statuses={statusOptions}
         onChanged={(updated) => setDevice(updated)}
       />
 
@@ -1135,6 +1152,7 @@ export function DeviceDetailPage() {
         operation={editingOperation}
         operationTypes={configQuery.data?.options.operation_type ?? []}
         technicians={configQuery.data?.technicians ?? []}
+        statuses={statusOptions}
         onSaved={(updated) => setDevice(updated)}
       />
 

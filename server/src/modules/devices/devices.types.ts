@@ -30,6 +30,7 @@ export interface DeviceRow {
   status: string;
   status_changed_at: Date;
   delivered_at: Date | null;
+  status_label: string | null;
   custom_fields: Record<string, unknown>;
   version: number;
   created_by: string | null;
@@ -51,6 +52,8 @@ export interface DeviceStatusHistoryRow {
   device_id: string;
   from_status: string | null;
   to_status: string;
+  from_status_label: string | null;
+  to_status_label: string | null;
   note: string | null;
   changed_by: string | null;
   changed_by_name: string | null;
@@ -70,6 +73,7 @@ export interface DeviceOperationRow {
   storage_path: string | null;
   result: string;
   device_status_after: string | null;
+  device_status_after_label: string | null;
   version: number;
   created_by_name: string | null;
   created_at: Date;
@@ -130,6 +134,7 @@ export interface DuplicateDeviceRow {
   intake_code: string;
   received_at: Date;
   status: string;
+  status_label: string | null;
   model: string | null;
   imei1: string | null;
   imei2: string | null;
@@ -281,6 +286,7 @@ export const DEVICE_SELECT = `
   d.equipment_type, d.manufacturer, d.model, d.serial_number, d.imei1, d.imei2,
   d.received_at, d.due_at, d.physical_condition, d.accessories, d.lock_status,
   d.device_password_cipher, d.reported_problem, d.notes, d.technician_id, d.status,
+  st.label_fa AS status_label,
   d.status_changed_at, d.delivered_at, d.custom_fields, d.version, d.created_by,
   d.created_at, d.updated_at,
   c.full_name AS owner_name, c.phone AS owner_phone, c.job_title AS owner_job,
@@ -299,6 +305,7 @@ export const DEVICE_FROM = `
   LEFT JOIN option_lists et ON et.category = 'equipment_type' AND et.value_key = d.equipment_type
   LEFT JOIN option_lists mf ON mf.category = 'manufacturer' AND mf.value_key = d.manufacturer
   LEFT JOIN option_lists ls ON ls.category = 'lock_status' AND ls.value_key = d.lock_status
+  LEFT JOIN option_lists st ON st.category = 'device_status' AND st.value_key = d.status
 `;
 
 const UNKNOWN_STATUS_TONE = 'neutral';
@@ -310,7 +317,7 @@ export function toDeviceSummary(row: DeviceRow): DeviceSummaryDto {
     intakeCode: row.intake_code,
     status: {
       key: row.status,
-      label: deviceStatusLabel(row.status),
+      label: row.status_label ?? deviceStatusLabel(row.status),
       tone: status?.tone ?? UNKNOWN_STATUS_TONE,
     },
     equipmentType: {
@@ -353,9 +360,15 @@ export function toStatusHistory(row: DeviceStatusHistoryRow): DeviceStatusHistor
   return {
     id: String(row.id),
     fromStatus: row.from_status
-      ? { key: row.from_status, label: deviceStatusLabel(row.from_status) }
+      ? {
+          key: row.from_status,
+          label: row.from_status_label ?? deviceStatusLabel(row.from_status),
+        }
       : null,
-    toStatus: { key: row.to_status, label: deviceStatusLabel(row.to_status) },
+    toStatus: {
+      key: row.to_status,
+      label: row.to_status_label ?? deviceStatusLabel(row.to_status),
+    },
     note: row.note,
     changedByName: row.changed_by_name,
     changedAt: row.changed_at.toISOString(),
@@ -378,7 +391,10 @@ export function toOperation(row: DeviceOperationRow): DeviceOperationDto {
     storagePath: row.storage_path,
     result: { key: row.result, label: operationResultLabel(row.result) },
     deviceStatusAfter: row.device_status_after
-      ? { key: row.device_status_after, label: deviceStatusLabel(row.device_status_after) }
+      ? {
+          key: row.device_status_after,
+          label: row.device_status_after_label ?? deviceStatusLabel(row.device_status_after),
+        }
       : null,
     createdByName: row.created_by_name,
     createdAt: row.created_at.toISOString(),
@@ -447,7 +463,7 @@ export function toDuplicate(row: DuplicateDeviceRow): DuplicateDeviceDto {
     id: row.id,
     intakeCode: row.intake_code,
     receivedAt: row.received_at.toISOString(),
-    status: { key: row.status, label: deviceStatusLabel(row.status) },
+    status: { key: row.status, label: row.status_label ?? deviceStatusLabel(row.status) },
     model: row.model,
     imei1: row.imei1,
     imei2: row.imei2,

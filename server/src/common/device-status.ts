@@ -73,6 +73,7 @@ export const OPTION_CATEGORIES = [
   'accessory',
   'operation_type',
   'lock_status',
+  'device_status',
 ] as const;
 
 export type OptionCategory = (typeof OPTION_CATEGORIES)[number];
@@ -83,4 +84,13 @@ export const OPTION_CATEGORY_LABELS: Record<OptionCategory, string> = {
   accessory: 'لوازم همراه',
   operation_type: 'نوع اقدام',
   lock_status: 'وضعیت قفل دستگاه',
+  device_status: 'وضعیت دستگاه',
 };
+
+/**
+ * وضعیت‌های سفارشی مدیر در فهرست گزینه‌ها ذخیره می‌شوند؛ وضعیت‌های پیش‌فرض نیز
+ * در همان فهرست نگهداری می‌شوند تا برچسب همه آن‌ها یک منبع داشته باشد.
+ */
+export const DEVICE_STATUS_CATEGORY: OptionCategory = 'device_status';
+
+export const DEFAULT_STATUS_TONE = 'info' as const;

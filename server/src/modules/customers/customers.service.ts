@@ -5,7 +5,7 @@ import { AuditService, type AuditActor } from '../audit/audit.service';
 import { AUDIT_ACTIONS } from '../audit/audit.actions';
 import { CreateCustomerDto, ListCustomersQueryDto, UpdateCustomerDto } from './customers.dto';
 import { CustomersRepository, type UpdateCustomerInput } from './customers.repository';
-import type { PublicCustomer } from './customers.types';
+import type { CustomerDeviceDto, PublicCustomer } from './customers.types';
 
 function clean(value: string | undefined | null): string | null {
   if (value === undefined || value === null) return null;
@@ -48,6 +48,14 @@ export class CustomersService {
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     };
+  }
+
+  async devices(id: string): Promise<CustomerDeviceDto[]> {
+    const row = await this.repo.findById(id);
+    if (!row) {
+      throw new AppException(ErrorCodes.NOT_FOUND, 'مشتری مورد نظر پیدا نشد.', HttpStatus.NOT_FOUND);
+    }
+    return this.repo.listDevices(id);
   }
 
   async create(dto: CreateCustomerDto, actor: AuditActor): Promise<PublicCustomer> {

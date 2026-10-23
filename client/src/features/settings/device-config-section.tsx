@@ -497,7 +497,7 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
             <div>
               <CardTitle>فهرست‌های قابل مدیریت</CardTitle>
               <p className="mt-0.5 text-xs text-ink-400">
-                نوع تجهیز، سازنده، لوازم همراه، نوع اقدام و وضعیت قفل.
+                نوع تجهیز، سازنده، لوازم همراه، نوع اقدام، وضعیت قفل و وضعیت دستگاه.
               </p>
             </div>
           </div>
@@ -516,6 +516,13 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
                     </Button>
                   ) : null}
                 </div>
+                {category === 'device_status' ? (
+                  <p className="mb-2 text-[11px] leading-5 text-ink-400">
+                    وضعیت‌های پیش‌فرض سامانه ثابت هستند و فقط عنوانشان قابل ویرایش است. وضعیت
+                    سفارشی جدید بلافاصله در فرم تغییر وضعیت، فیلترها و گزارش‌ها قابل انتخاب است و
+                    دستگاه‌های دارای آن به‌عنوان کار در جریان شمرده می‌شوند.
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   {items.map((item) => (
                     <div
@@ -524,9 +531,20 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
                     >
                       <button
                         type="button"
+                        disabled={category === 'device_status' && item.isSystem}
                         onClick={() => canManage && void toggleOption(item)}
-                        className={item.isActive ? 'text-ink-700' : 'text-ink-400 line-through'}
-                        title={item.isActive ? 'غیرفعال کردن' : 'فعال کردن'}
+                        className={
+                          item.isActive
+                            ? 'text-ink-700 disabled:cursor-default'
+                            : 'text-ink-400 line-through'
+                        }
+                        title={
+                          category === 'device_status' && item.isSystem
+                            ? 'وضعیت پیش‌فرض سامانه است؛ عنوان آن را ویرایش کنید'
+                            : item.isActive
+                              ? 'غیرفعال کردن'
+                              : 'فعال کردن'
+                        }
                       >
                         {item.label}
                       </button>

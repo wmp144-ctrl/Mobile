@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Printer, ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useApiQuery } from '@/lib/use-api';
@@ -21,6 +21,8 @@ function Row({ label, value }: { label: string; value: string | null | undefined
 
 export function DevicePrintPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const deliveryMode = searchParams.get('type') === 'delivery';
   const workshopName = useAuth((state) => state.workshopName);
   const [detail, setDetail] = useState<DeviceDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,9 @@ export function DevicePrintPage() {
       <header className="flex items-start justify-between gap-6 border-b-2 border-ink-900 pb-3">
         <div>
           <h1 className="text-lg font-bold">{workshopName || 'تعمیرگاه تخصصی موبایل و تجهیزات الکترونیکی'}</h1>
-          <p className="mt-1 text-xs text-ink-500">رسید پذیرش دستگاه — نسخه مشتری</p>
+          <p className="mt-1 text-xs text-ink-500">
+            {deliveryMode ? 'رسید تحویل دستگاه — نسخه مشتری' : 'رسید پذیرش دستگاه — نسخه مشتری'}
+          </p>
         </div>
         <div className="text-end">
           <p className="font-mono text-base font-bold" dir="ltr">
@@ -96,6 +100,9 @@ export function DevicePrintPage() {
           <Row label="شغل آورنده" value={detail.broughtBy.job} />
           <Row label="تکنسین مسئول" value={detail.technician?.fullName} />
           <Row label="تحویل پیش‌بینی‌شده" value={detail.dueAt ? formatJalaliDateTime(detail.dueAt) : null} />
+          {detail.deliveredAt ? (
+            <Row label="زمان تحویل واقعی" value={formatJalaliDateTime(detail.deliveredAt)} />
+          ) : null}
           <Row label="وضعیت ظاهری" value={detail.physicalCondition} />
         </section>
       </div>
@@ -138,9 +145,20 @@ export function DevicePrintPage() {
         </section>
       ) : null}
 
+      {deliveryMode && detail.deliveredAt ? (
+        <section className="mt-4 rounded border border-ink-300 p-3 text-xs leading-6 text-ink-600">
+          دستگاه در تاریخ {formatJalaliDateTime(detail.deliveredAt)} با وضعیت «{detail.status.label}»
+          به مشتری تحویل شد. با امضای این رسید، دریافت دستگاه و لوازم همراه تأیید می‌شود.
+        </section>
+      ) : null}
+
       <section className="mt-8 grid grid-cols-2 gap-8 text-xs text-ink-500">
-        <div className="border-t border-ink-300 pt-2 text-center">امضای مشتری</div>
-        <div className="border-t border-ink-300 pt-2 text-center">امضای پذیرنده</div>
+        <div className="border-t border-ink-300 pt-2 text-center">
+          {deliveryMode ? 'امضای تحویل‌گیرنده' : 'امضای مشتری'}
+        </div>
+        <div className="border-t border-ink-300 pt-2 text-center">
+          {deliveryMode ? 'امضای تحویل‌دهنده' : 'امضای پذیرنده'}
+        </div>
       </section>
 
       <p className="mt-6 text-[10px] leading-5 text-ink-400">

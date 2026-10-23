@@ -21,7 +21,8 @@ const BASE_FROM = `FROM devices d
   JOIN customers c ON c.id = d.customer_id
   LEFT JOIN users tech ON tech.id = d.technician_id
   LEFT JOIN option_lists et ON et.category = 'equipment_type' AND et.value_key = d.equipment_type
-  LEFT JOIN option_lists mf ON mf.category = 'manufacturer' AND mf.value_key = d.manufacturer`;
+  LEFT JOIN option_lists mf ON mf.category = 'manufacturer' AND mf.value_key = d.manufacturer
+  LEFT JOIN option_lists ds ON ds.category = 'device_status' AND ds.value_key = d.status`;
 
 const STATUS_LABELS = new Map(DEVICE_STATUSES.map((status) => [status.key, status.label]));
 const STATUS_ORDER = new Map(DEVICE_STATUSES.map((status, index) => [status.key, index]));
@@ -65,7 +66,11 @@ const TABLE_SPECS: Record<ReportTableColumn, TableSpec> = {
     type: 'text',
   },
   model: { sql: `COALESCE(NULLIF(trim(d.model), ''), 'نامشخص')`, label: 'مدل', type: 'text' },
-  status: { sql: 'd.status', label: 'وضعیت', type: 'status' },
+  status: {
+    sql: `COALESCE(ds.label_fa, d.status)`,
+    label: 'وضعیت',
+    type: 'status',
+  },
   technician: { sql: `COALESCE(tech.full_name, 'بدون تکنسین')`, label: 'تکنسین', type: 'text' },
   receivedAt: { sql: 'd.received_at', label: 'تاریخ پذیرش', type: 'date' },
   dueAt: { sql: 'd.due_at', label: 'تاریخ تحویل پیش‌بینی‌شده', type: 'date' },
@@ -403,8 +408,6 @@ export class AnalyticsRepository {
           output[column] = null;
         } else if (spec.type === 'date') {
           output[column] = value instanceof Date ? value.toISOString() : String(value);
-        } else if (column === 'status') {
-          output[column] = STATUS_LABELS.get(String(value)) ?? String(value);
         } else if (spec.type === 'number') {
           output[column] = Number(value);
         } else if (typeof value === 'boolean') {
@@ -481,6 +484,18 @@ export class AnalyticsRepository {
     );
   }
 
+  /** وضعیت‌های فعال دستگاه به ترتیب تعریف‌شده توسط مدیر */
+  async statusOptions(): Promise<{ value: string; label: string; count: number }[]> {
+    return this.db.query(
+      `SELECT ol.value_key AS value, ol.label_fa AS label, COUNT(d.id)::int AS count
+         FROM option_lists ol
+         LEFT JOIN devices d ON d.status = ol.value_key
+        WHERE ol.category = 'device_status' AND ol.is_active
+        GROUP BY ol.value_key, ol.label_fa, ol.sort_order
+        ORDER BY ol.sort_order ASC, ol.label_fa ASC`,
+    );
+  }
+
   async modelOptions(): Promise<string[]> {
     const rows = await this.db.query<{ model: string }>(
       `SELECT DISTINCT trim(model) AS model FROM devices
@@ -531,7 +546,7 @@ export class AnalyticsRepository {
       case 'model':
         return `COALESCE(NULLIF(trim(d.model), ''), 'نامشخص')`;
       case 'status':
-        return 'd.status';
+        return `COALESCE(ds.label_fa, d.status)`;
       case 'job':
         return `COALESCE(NULLIF(trim(d.brought_by_job), ''), 'نامشخص')`;
       case 'technician':
@@ -618,10 +633,15 @@ export class AnalyticsRepository {
       if (!values.has(category)) values.set(category, new Map());
       values.get(category)!.set(row.status, Number(row.value ?? 0));
     }
+    // در نمودارهایی که خود وضعیت محور است، برچسب پایگاه داده اولویت دارد.
+    const labelByStatus = new Map<string, string>();
+    if (dimension === 'status') {
+      for (const row of rows) labelByStatus.set(row.status, String(row.label ?? row.status));
+    }
     return {
       categories,
       series: statuses.map((status) => ({
-        name: STATUS_LABELS.get(status) ?? status,
+        name: labelByStatus.get(status) ?? STATUS_LABELS.get(status) ?? status,
         data: categories.map((category) => values.get(category)?.get(status) ?? 0),
       })),
       total: rows.reduce((sum, row) => sum + Number(row.value ?? 0), 0),
@@ -629,7 +649,6 @@ export class AnalyticsRepository {
   }
 
   mapCategoryLabel(dimension: string, label: string): string {
-    if (dimension === 'status') return STATUS_LABELS.get(label) ?? label;
     if (dimension === 'month') return jalaliMonthLabel(label);
     if (dimension === 'year') return label;
     return label;

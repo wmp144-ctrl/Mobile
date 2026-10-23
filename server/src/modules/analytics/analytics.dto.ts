@@ -17,7 +17,6 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { DEVICE_STATUSES } from '../../common/device-status';
 import {
   REPORT_CHART_TYPES,
   REPORT_DIMENSIONS,
@@ -29,7 +28,8 @@ import {
   type ReportTableColumn,
 } from './analytics.types';
 
-const STATUS_KEYS = DEVICE_STATUSES.map((status) => status.key);
+/** وضعیت‌های پیش‌فرض و سفارشی؛ وضعیت سفارشی با کلید لاتین ذخیره می‌شود. */
+const STATUS_KEY_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
 
 export class AnalyticsFilterDto {
   @IsOptional()
@@ -80,7 +80,7 @@ export class AnalyticsFilterDto {
   technicianId?: string;
 
   @IsOptional()
-  @IsIn(STATUS_KEYS, { message: 'وضعیت انتخاب‌شده معتبر نیست.' })
+  @Matches(STATUS_KEY_PATTERN, { message: 'وضعیت انتخاب‌شده معتبر نیست.' })
   status?: string;
 
   @IsOptional()

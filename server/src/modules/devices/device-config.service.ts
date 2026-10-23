@@ -3,8 +3,10 @@ import * as crypto from 'node:crypto';
 import { DatabaseService } from '../../database/database.service';
 import { AppException, ErrorCodes } from '../../common/errors/app.exception';
 import {
+  DEVICE_STATUS_CATEGORY,
   OPTION_CATEGORY_LABELS,
   OPTION_CATEGORIES,
+  findDeviceStatus,
   type OptionCategory,
 } from '../../common/device-status';
 import { AuditService, type AuditActor } from '../audit/audit.service';
@@ -18,8 +20,10 @@ import {
 } from './device-config.dto';
 import {
   FIELD_OPTION_SELECT,
+  toDeviceStatus,
   toField,
   toOption,
+  type DeviceStatusDto,
   type FieldDefinitionDto,
   type FieldDefinitionRow,
   type OptionDto,
@@ -39,6 +43,8 @@ const OPTION_USAGE_SELECT = `
     WHEN 'operation_type' THEN
       (SELECT COUNT(*)::int FROM device_operations p
         WHERE p.operation_type = o.value_key AND p.deleted_at IS NULL)
+    WHEN 'device_status' THEN
+      (SELECT COUNT(*)::int FROM devices d WHERE d.status = o.value_key)
     ELSE 0
   END AS usage_count
 `;
@@ -51,6 +57,7 @@ const OPTION_SELECT = `
 export interface DeviceConfigDto {
   fields: FieldDefinitionDto[];
   options: Record<OptionCategory, OptionDto[]>;
+  statuses: DeviceStatusDto[];
   technicians: { id: string; fullName: string; roleName: string }[];
 }
 
@@ -62,12 +69,60 @@ export class DeviceConfigService {
   ) {}
 
   async getConfig(): Promise<DeviceConfigDto> {
-    const [fields, options, technicians] = await Promise.all([
+    const [fields, options, statuses, technicians] = await Promise.all([
       this.listFields(),
       this.listOptions(),
+      this.listStatuses(true),
       this.listTechnicians(),
     ]);
-    return { fields, options, technicians };
+    return { fields, options, statuses, technicians };
+  }
+
+  /**
+   * وضعیت‌های دستگاه از فهرست گزینه‌ها خوانده می‌شوند تا وضعیت‌های سفارشی مدیر
+   * هم کنار وضعیت‌های پیش‌فرض در همه فرم‌ها و فیلترها دیده شوند.
+   */
+  async listStatuses(includeInactive = false): Promise<DeviceStatusDto[]> {
+    const rows = await this.db.query<OptionRow>(
+      `SELECT ${OPTION_SELECT}
+         FROM option_lists o
+        WHERE o.category = $1
+        ORDER BY o.sort_order ASC, o.label_fa ASC`,
+      [DEVICE_STATUS_CATEGORY],
+    );
+    return rows
+      .filter((row) => includeInactive || row.is_active)
+      .map((row) => {
+        const builtin = findDeviceStatus(row.value_key);
+        return toDeviceStatus(
+          row,
+          builtin ? { tone: builtin.tone, active: builtin.active, closed: builtin.closed } : undefined,
+        );
+      });
+  }
+
+  /** برچسب وضعیت، با اولویت مقدار ذخیره‌شده توسط مدیر */
+  async statusLabel(key: string): Promise<string> {
+    const row = await this.db.queryOne<{ label_fa: string }>(
+      'SELECT label_fa FROM option_lists WHERE category = $1 AND value_key = $2',
+      [DEVICE_STATUS_CATEGORY, key],
+    );
+    return row?.label_fa ?? findDeviceStatus(key)?.label ?? key;
+  }
+
+  /** اعتبارسنجی وضعیت انتخاب‌شده؛ وضعیت غیرفعال قابل انتخاب نیست. */
+  async assertStatus(key: string): Promise<void> {
+    const row = await this.db.queryOne<{ is_active: boolean }>(
+      'SELECT is_active FROM option_lists WHERE category = $1 AND value_key = $2',
+      [DEVICE_STATUS_CATEGORY, key],
+    );
+    if (!row || !row.is_active) {
+      throw new AppException(
+        ErrorCodes.VALIDATION_ERROR,
+        'وضعیت انتخاب‌شده معتبر نیست یا غیرفعال شده است.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
   async listFields(): Promise<FieldDefinitionDto[]> {
@@ -260,6 +315,17 @@ export class DeviceConfigService {
 
   async updateOption(id: string, dto: UpdateOptionDto, actor: AuditActor): Promise<OptionDto> {
     const existing = await this.findOption(id);
+    if (
+      existing.category === DEVICE_STATUS_CATEGORY &&
+      existing.is_system &&
+      dto.isActive === false
+    ) {
+      throw new AppException(
+        ErrorCodes.OPTION_IN_USE,
+        'وضعیت‌های پیش‌فرض سامانه قابل غیرفعال‌سازی نیستند؛ می‌توانید عنوان آن‌ها را ویرایش کنید.',
+        HttpStatus.CONFLICT,
+      );
+    }
     const sets: string[] = [];
     const params: unknown[] = [];
     const set = (column: string, value: unknown): void => {

@@ -16,10 +16,12 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { DEVICE_STATUSES, LOCK_STATUS_KEYS, OPERATION_RESULTS } from '../../common/device-status';
+import { LOCK_STATUS_KEYS, OPERATION_RESULTS } from '../../common/device-status';
 import { EmptyToUndefined } from '../../common/validation/validation';
 
-const STATUS_KEYS = DEVICE_STATUSES.map((status) => status.key);
+/** وضعیت‌های پیش‌فرض و سفارشی؛ اعتبارسنجی کامل در سرویس انجام می‌شود. */
+const STATUS_KEY_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
+const STATUS_KEY_MESSAGE = 'وضعیت انتخاب‌شده معتبر نیست.';
 const RESULT_KEYS = OPERATION_RESULTS.map((result) => result.key);
 const SORT_FIELDS = [
   'intakeCode',
@@ -40,7 +42,7 @@ export class ListDevicesQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(STATUS_KEYS, { message: 'وضعیت انتخاب‌شده معتبر نیست.' })
+  @Matches(STATUS_KEY_PATTERN, { message: STATUS_KEY_MESSAGE })
   status?: string;
 
   @IsOptional()
@@ -230,7 +232,7 @@ export class UpdateDeviceDto extends CreateDeviceDto {
 }
 
 export class ChangeDeviceStatusDto {
-  @IsIn(STATUS_KEYS, { message: 'وضعیت انتخاب‌شده معتبر نیست.' })
+  @Matches(STATUS_KEY_PATTERN, { message: STATUS_KEY_MESSAGE })
   status!: string;
 
   @IsOptional()
@@ -289,7 +291,7 @@ export class CreateOperationDto {
 
   @IsOptional()
   @EmptyToUndefined()
-  @IsIn(STATUS_KEYS, { message: 'وضعیت نهایی معتبر نیست.' })
+  @Matches(STATUS_KEY_PATTERN, { message: 'وضعیت نهایی معتبر نیست.' })
   deviceStatusAfter?: string;
 }
 

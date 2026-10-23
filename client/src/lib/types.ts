@@ -505,6 +505,17 @@ export interface FieldDefinition {
   sortOrder: number;
 }
 
+export interface CustomerDeviceEntry {
+  id: string;
+  intakeCode: string;
+  status: { key: string; label: string };
+  equipmentType: string;
+  model: string | null;
+  reportedProblem: string;
+  receivedAt: string;
+  deliveredAt: string | null;
+}
+
 export interface OptionItem {
   id: string;
   key: string;
@@ -521,9 +532,20 @@ export interface TechnicianOption {
   roleName: string;
 }
 
+export interface DeviceStatusConfig {
+  key: string;
+  label: string;
+  tone: string;
+  active: boolean;
+  closed: boolean;
+  isActive: boolean;
+  isSystem: boolean;
+}
+
 export interface DeviceConfigData {
   fields: FieldDefinition[];
   options: Record<string, OptionItem[]>;
+  statuses: DeviceStatusConfig[];
   technicians: TechnicianOption[];
 }
 

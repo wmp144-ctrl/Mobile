@@ -17,6 +17,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CustomerDialog } from './customer-dialog';
+import { CustomerDevicesDialog } from './customer-devices-dialog';
 
 export function CustomersPage() {
   const { can } = usePermissions();
@@ -29,6 +30,7 @@ export function CustomersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Customer | null>(null);
+  const [devicesCustomer, setDevicesCustomer] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -149,7 +151,14 @@ export function CustomersPage() {
                   </TableCell>
                   <TableCell className="text-xs text-ink-600">{customer.jobTitle || '—'}</TableCell>
                   <TableCell className="text-xs text-ink-600">
-                    {customer.deviceCount.toLocaleString('fa-IR')} دستگاه
+                    <button
+                      type="button"
+                      onClick={() => setDevicesCustomer(customer)}
+                      className="rounded-lg px-2 py-1 font-medium text-brand-700 transition hover:bg-brand-50"
+                      title="مشاهده سوابق دستگاه‌های این مشتری"
+                    >
+                      {customer.deviceCount.toLocaleString('fa-IR')} دستگاه
+                    </button>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-xs text-ink-500">
                     {formatJalaliDate(customer.createdAt)}
@@ -204,6 +213,14 @@ export function CustomersPage() {
         onOpenChange={setFormOpen}
         customer={editing}
         onSaved={customersQuery.reload}
+      />
+
+      <CustomerDevicesDialog
+        open={Boolean(devicesCustomer)}
+        onOpenChange={(open) => {
+          if (!open) setDevicesCustomer(null);
+        }}
+        customer={devicesCustomer}
       />
 
       <ConfirmDialog

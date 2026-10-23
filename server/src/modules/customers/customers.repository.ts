@@ -4,7 +4,10 @@ import { buildPage, resolvePagination, type PageResult } from '../../common/util
 import {
   CUSTOMER_FROM,
   CUSTOMER_SELECT,
+  toCustomerDevice,
   toPublicCustomer,
+  type CustomerDeviceDto,
+  type CustomerDeviceRow,
   type CustomerRow,
   type PublicCustomer,
 } from './customers.types';
@@ -138,6 +141,22 @@ export class CustomersRepository {
     );
     if (!updated) return null;
     return this.findById(id);
+  }
+
+  /** سوابق تمام دستگاه‌های یک مشتری برای نمایش در پرونده مشتری */
+  async listDevices(customerId: string): Promise<CustomerDeviceDto[]> {
+    const rows = await this.db.query<CustomerDeviceRow>(
+      `SELECT d.id, d.intake_code, d.status, ds.label_fa AS status_label,
+              d.equipment_type, et.label_fa AS equipment_type_label,
+              d.model, d.reported_problem, d.received_at, d.delivered_at
+         FROM devices d
+         LEFT JOIN option_lists ds ON ds.category = 'device_status' AND ds.value_key = d.status
+         LEFT JOIN option_lists et ON et.category = 'equipment_type' AND et.value_key = d.equipment_type
+        WHERE d.customer_id = $1
+        ORDER BY d.received_at DESC, d.created_at DESC`,
+      [customerId],
+    );
+    return rows.map(toCustomerDevice);
   }
 
   async countDevices(customerId: string): Promise<number> {

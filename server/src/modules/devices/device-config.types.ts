@@ -46,6 +46,16 @@ export interface OptionRow {
   usage_count: number;
 }
 
+export interface DeviceStatusDto {
+  key: string;
+  label: string;
+  tone: string;
+  active: boolean;
+  closed: boolean;
+  isActive: boolean;
+  isSystem: boolean;
+}
+
 export interface OptionDto {
   id: string;
   key: string;
@@ -78,6 +88,21 @@ export function toField(row: FieldDefinitionRow): FieldDefinitionDto {
     sortOrder: row.sort_order,
     isSearchable: row.is_searchable,
     isReportable: row.is_reportable,
+  };
+}
+
+export function toDeviceStatus(
+  row: Pick<OptionRow, 'value_key' | 'label_fa' | 'is_active' | 'is_system'>,
+  meta?: { tone: string; active: boolean; closed: boolean },
+): DeviceStatusDto {
+  return {
+    key: row.value_key,
+    label: row.label_fa,
+    tone: meta?.tone ?? 'info',
+    active: meta?.active ?? true,
+    closed: meta?.closed ?? false,
+    isActive: row.is_active,
+    isSystem: row.is_system,
   };
 }
 

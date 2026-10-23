@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
-import { DEVICE_STATUS_OPTIONS } from '@/lib/device-status';
+import { DEVICE_STATUS_OPTIONS, type DeviceStatusOption } from '@/lib/device-status';
 import type { DeviceDetail } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,6 +14,7 @@ interface StatusChangeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   device: DeviceDetail | null;
+  statuses?: DeviceStatusOption[];
   onChanged: (device: DeviceDetail) => void;
 }
 
@@ -21,6 +22,7 @@ export function StatusChangeDialog({
   open,
   onOpenChange,
   device,
+  statuses = DEVICE_STATUS_OPTIONS,
   onChanged,
 }: StatusChangeDialogProps) {
   const toast = useToast();
@@ -31,11 +33,11 @@ export function StatusChangeDialog({
 
   useEffect(() => {
     if (!open || !device) return;
-    const next = DEVICE_STATUS_OPTIONS.find((item) => item.key !== device.status.key);
+    const next = statuses.find((item) => item.key !== device.status.key);
     setStatus(next?.key ?? '');
     setNote('');
     setError(null);
-  }, [open, device]);
+  }, [open, device, statuses]);
 
   async function handleSubmit() {
     if (!device || saving) return;
@@ -83,7 +85,7 @@ export function StatusChangeDialog({
               onChange={(event) => setStatus(event.target.value)}
               className="mt-1.5"
             >
-              {DEVICE_STATUS_OPTIONS.filter((item) => item.key !== device?.status.key).map(
+              {statuses.filter((item) => item.key !== device?.status.key).map(
                 (item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { PoolClient } from 'pg';
 import { DatabaseService } from '../../database/database.service';
-import { DEVICE_STATUSES } from '../../common/device-status';
 import { buildPage, resolvePagination, type PageResult } from '../../common/utils/pagination';
 import {
   DEVICE_FROM,
@@ -30,15 +29,12 @@ import {
   type DuplicateDeviceRow,
 } from './devices.types';
 
-const STATUS_ORDER_ARRAY = `ARRAY[${DEVICE_STATUSES.map((status) => `'${status.key}'`).join(
-  ',',
-)}]::text[]`;
-
 const SORT_COLUMNS: Record<string, string> = {
   intakeCode: 'd.intake_code',
   receivedAt: 'd.received_at',
   dueAt: 'd.due_at',
-  status: `array_position(${STATUS_ORDER_ARRAY}, d.status)`,
+  status: `COALESCE((SELECT os.sort_order FROM option_lists os
+                        WHERE os.category = 'device_status' AND os.value_key = d.status), 9999)`,
   owner: 'c.full_name',
   equipmentType: 'et.label_fa',
   manufacturer: 'mf.label_fa',
@@ -234,10 +230,12 @@ export class DevicesRepository {
     if (!imei1 && !imei2 && !serial) return [];
 
     const rows = await this.db.query<DuplicateDeviceRow>(
-      `SELECT d.id, d.intake_code, d.received_at, d.status, d.model, d.imei1, d.imei2,
-              d.serial_number, c.full_name AS owner_name, d.customer_id
+      `SELECT d.id, d.intake_code, d.received_at, d.status, ds.label_fa AS status_label,
+              d.model, d.imei1, d.imei2, d.serial_number, c.full_name AS owner_name,
+              d.customer_id
          FROM devices d
          JOIN customers c ON c.id = d.customer_id
+         LEFT JOIN option_lists ds ON ds.category = 'device_status' AND ds.value_key = d.status
         WHERE ($1::uuid IS NULL OR d.id <> $1)
           AND (
             ($2::text IS NOT NULL AND (d.imei1 = $2 OR d.imei2 = $2))
@@ -417,10 +415,14 @@ export class DevicesRepository {
 
   async listHistory(deviceId: string): Promise<DeviceStatusHistoryDto[]> {
     const rows = await this.db.query<DeviceStatusHistoryRow>(
-      `SELECT id::text, device_id, from_status, to_status, note, changed_by, changed_by_name, changed_at
-         FROM device_status_history
-        WHERE device_id = $1
-        ORDER BY changed_at DESC, id DESC`,
+      `SELECT h.id::text, h.device_id, h.from_status, h.to_status, h.note,
+              h.changed_by, h.changed_by_name, h.changed_at,
+              fs.label_fa AS from_status_label, ts.label_fa AS to_status_label
+         FROM device_status_history h
+         LEFT JOIN option_lists fs ON fs.category = 'device_status' AND fs.value_key = h.from_status
+         LEFT JOIN option_lists ts ON ts.category = 'device_status' AND ts.value_key = h.to_status
+        WHERE h.device_id = $1
+        ORDER BY h.changed_at DESC, h.id DESC`,
       [deviceId],
     );
     return rows.map(toStatusHistory);
@@ -432,10 +434,11 @@ export class DevicesRepository {
               o.technician_name, o.description, o.data_size_bytes::text AS data_size_bytes,
               o.storage_path, o.result, o.device_status_after, o.version,
               u.full_name AS created_by_name, o.created_at, o.updated_at,
-              ol.label_fa AS operation_type_label
+              ol.label_fa AS operation_type_label, os.label_fa AS device_status_after_label
          FROM device_operations o
          LEFT JOIN users u ON u.id = o.created_by
          LEFT JOIN option_lists ol ON ol.category = 'operation_type' AND ol.value_key = o.operation_type
+         LEFT JOIN option_lists os ON os.category = 'device_status' AND os.value_key = o.device_status_after
         WHERE o.device_id = $1 AND o.deleted_at IS NULL
         ORDER BY o.performed_at DESC, o.created_at DESC`,
       [deviceId],
@@ -449,10 +452,11 @@ export class DevicesRepository {
               o.technician_name, o.description, o.data_size_bytes::text AS data_size_bytes,
               o.storage_path, o.result, o.device_status_after, o.version,
               u.full_name AS created_by_name, o.created_at, o.updated_at,
-              ol.label_fa AS operation_type_label
+              ol.label_fa AS operation_type_label, os.label_fa AS device_status_after_label
          FROM device_operations o
          LEFT JOIN users u ON u.id = o.created_by
          LEFT JOIN option_lists ol ON ol.category = 'operation_type' AND ol.value_key = o.operation_type
+         LEFT JOIN option_lists os ON os.category = 'device_status' AND os.value_key = o.device_status_after
         WHERE o.device_id = $1 AND o.id = $2 AND o.deleted_at IS NULL`,
       [deviceId, operationId],
     );

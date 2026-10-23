@@ -38,6 +38,12 @@ export class DeviceConfigController {
     return this.config.listFields();
   }
 
+  @Get('statuses')
+  @RequirePermissions(PERMISSIONS.REPAIRS_VIEW)
+  listStatuses() {
+    return this.config.listStatuses(false);
+  }
+
   @Post('fields')
   @RequirePermissions(PERMISSIONS.SETTINGS_MANAGE)
   createField(@Body() dto: CreateFieldDto, @CurrentUser() user: AuthUser) {

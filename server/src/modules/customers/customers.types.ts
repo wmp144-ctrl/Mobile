@@ -30,6 +30,46 @@ export interface PublicCustomer {
   updatedAt: string;
 }
 
+export interface CustomerDeviceRow {
+  id: string;
+  intake_code: string;
+  status: string;
+  status_label: string | null;
+  equipment_type: string;
+  equipment_type_label: string | null;
+  model: string | null;
+  reported_problem: string;
+  received_at: Date;
+  delivered_at: Date | null;
+}
+
+export interface CustomerDeviceDto {
+  id: string;
+  intakeCode: string;
+  status: { key: string; label: string };
+  equipmentType: string;
+  model: string | null;
+  reportedProblem: string;
+  receivedAt: string;
+  deliveredAt: string | null;
+}
+
+export function toCustomerDevice(row: CustomerDeviceRow): CustomerDeviceDto {
+  return {
+    id: row.id,
+    intakeCode: row.intake_code,
+    status: {
+      key: row.status,
+      label: row.status_label ?? row.status,
+    },
+    equipmentType: row.equipment_type_label ?? row.equipment_type,
+    model: row.model,
+    reportedProblem: row.reported_problem,
+    receivedAt: row.received_at.toISOString(),
+    deliveredAt: row.delivered_at ? row.delivered_at.toISOString() : null,
+  };
+}
+
 export const CUSTOMER_SELECT = `
   c.id, c.full_name, c.phone, c.phone_secondary, c.job_title, c.national_id, c.address,
   c.notes, c.version, c.created_at, c.updated_at,
