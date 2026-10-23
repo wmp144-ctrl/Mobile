@@ -14,6 +14,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { SystemModule } from './modules/system/system.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { DevicesModule } from './modules/devices/devices.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { DevicesModule } from './modules/devices/devices.module';
     DashboardModule,
     SystemModule,
     CustomersModule,
+    StorageModule,
     DevicesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: OriginGuard }],

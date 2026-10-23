@@ -8,6 +8,7 @@ import {
   Eye,
   FileText,
   FolderOpen,
+  FolderPlus,
   HardDrive,
   ImagePlus,
   Images,
@@ -24,9 +25,25 @@ import { errorMessage } from '@/lib/errors';
 import { useApiQuery } from '@/lib/use-api';
 import { usePermissions } from '@/lib/use-permissions';
 import { formatJalaliDate, formatJalaliDateTime } from '@/lib/jalali';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, formatNumber } from '@/lib/format';
 import { DEVICE_STATUS_OPTIONS, statusBadgeVariant } from '@/lib/device-status';
-import type { DeviceConfigData, DeviceDetail, DeviceImageEntry, FieldDefinition } from '@/lib/types';
+import {
+  accessStatusLabel,
+  accessStatusVariant,
+  backupStatusLabel,
+  backupStatusVariant,
+  folderCategoryLabel,
+  launchHelper,
+} from '@/lib/storage';
+import type {
+  DeviceConfigData,
+  DeviceDetail,
+  DeviceFileEntry,
+  DeviceImageEntry,
+  FieldDefinition,
+  OpenTicket,
+  StorageLocation,
+} from '@/lib/types';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,12 +65,6 @@ type TabKey = 'info' | 'status' | 'operations' | 'files' | 'images' | 'notes';
 type PendingDelete =
   | { kind: 'operation' | 'file' | 'image' | 'note'; id: string; title: string }
   | null;
-
-const STORAGE_KIND_LABELS: Record<string, string> = {
-  network: 'پوشه شبکه',
-  local: 'دیسک سرور',
-  external: 'حافظه خارجی',
-};
 
 function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -146,7 +157,8 @@ export function DeviceDetailPage() {
   const toast = useToast();
   const { can } = usePermissions();
   const canManage = can('repairs.manage');
-  const canFiles = can('files.manage');
+  const canFiles = can('files.view') || can('files.manage');
+  const canManageFiles = can('files.manage');
 
   const [device, setDevice] = useState<DeviceDetail | null>(null);
   const [tab, setTab] = useState<TabKey>('info');
@@ -164,6 +176,9 @@ export function DeviceDetailPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageCaption, setImageCaption] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
+  const [locations, setLocations] = useState<StorageLocation[]>([]);
+  const [fileBusy, setFileBusy] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
 
   const detailQuery = useApiQuery<DeviceDetail>(() => api.get<DeviceDetail>(`/api/devices/${id}`), [id]);
   const configQuery = useApiQuery<DeviceConfigData>(
@@ -202,12 +217,70 @@ export function DeviceDetailPage() {
     }
   }
 
+  useEffect(() => {
+    if (!canFiles) return;
+    let active = true;
+    api
+      .get<StorageLocation[]>('/api/storage/locations')
+      .then((items) => {
+        if (active) setLocations(items);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [canFiles]);
+
   async function copyPath(path: string) {
     try {
       await navigator.clipboard.writeText(path);
       toast.success('مسیر فایل کپی شد.');
     } catch {
       toast.error('کپی خودکار ممکن نشد. مسیر را دستی انتخاب کنید.');
+    }
+  }
+
+  async function openFolder(file: DeviceFileEntry) {
+    if (!device) return;
+    setFileBusy(`open-${file.id}`);
+    try {
+      const ticket = await api.post<OpenTicket>(
+        `/api/devices/${device.id}/files/${file.id}/open-ticket`,
+      );
+      launchHelper(ticket);
+      toast.info('درخواست بازکردن پوشه به برنامه کمکی ارسال شد.');
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setFileBusy(null);
+    }
+  }
+
+  async function checkFileAccess(file: DeviceFileEntry) {
+    if (!device) return;
+    setFileBusy(`check-${file.id}`);
+    try {
+      await api.post(`/api/devices/${device.id}/files/${file.id}/check`);
+      toast.success('دسترسی به مسیر بررسی شد.');
+      await detailQuery.reload();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setFileBusy(null);
+    }
+  }
+
+  async function provisionFolder() {
+    if (!device) return;
+    setProvisioning(true);
+    try {
+      await api.post(`/api/devices/${device.id}/storage/provision`);
+      toast.success('پوشه دستگاه ساخته و بررسی شد.');
+      await detailQuery.reload();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setProvisioning(false);
     }
   }
 
@@ -294,11 +367,22 @@ export function DeviceDetailPage() {
     new Date(device.dueAt as string).getTime() < Date.now() &&
     !['delivered', 'failed', 'unrepairable', 'cancelled'].includes(device.status.key);
 
+  const primaryFile = device.files.find((file) => file.isPrimary) ?? null;
+
   const tabs: Array<{ key: TabKey; label: string; icon: ReactNode; count?: number }> = [
     { key: 'info', label: 'مشخصات', icon: <ClipboardList className="size-4" /> },
     { key: 'status', label: 'وضعیت و تاریخچه', icon: <CalendarClock className="size-4" /> },
     { key: 'operations', label: 'اقدامات', icon: <HardDrive className="size-4" />, count: device.operations.length },
-    { key: 'files', label: 'فایل و بکاپ', icon: <FolderOpen className="size-4" />, count: device.files.length },
+    ...(canFiles
+      ? [
+          {
+            key: 'files' as const,
+            label: 'فایل و بکاپ',
+            icon: <FolderOpen className="size-4" />,
+            count: device.files.length,
+          },
+        ]
+      : []),
     { key: 'images', label: 'تصاویر', icon: <Images className="size-4" />, count: device.images.length },
     { key: 'notes', label: 'یادداشت‌ها', icon: <StickyNote className="size-4" />, count: device.technicianNotes.length },
   ];
@@ -660,26 +744,121 @@ export function DeviceDetailPage() {
 
       {tab === 'files' ? (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex-wrap">
             <div>
-              <CardTitle>فایل‌ها و مسیرهای ذخیره‌سازی</CardTitle>
+              <CardTitle>پرونده فایل، بکاپ و مسیرهای ذخیره‌سازی</CardTitle>
               <p className="mt-1 text-xs text-ink-400">
-                مسیر بکاپ‌ها و فایل‌های مربوط به این دستگاه را ثبت کنید.
+                پوشه اختصاصی دستگاه، بکاپ‌ها، فایل‌های ریکاوری و سالم بودن مسیرها را مدیریت کنید.
               </p>
             </div>
-            {canFiles ? (
-              <Button
-                onClick={() => {
-                  setEditingFileId(null);
-                  setFileOpen(true);
-                }}
-              >
-                <Plus className="size-4" />
-                ثبت مسیر فایل
-              </Button>
+            {canManageFiles ? (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => void provisionFolder()} loading={provisioning}>
+                  <FolderPlus className="size-4" />
+                  {primaryFile ? 'بازسازی / بررسی پوشه' : 'ایجاد پوشه دستگاه'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEditingFileId(null);
+                    setFileOpen(true);
+                  }}
+                >
+                  <Plus className="size-4" />
+                  ثبت مسیر فایل
+                </Button>
+              </div>
             ) : null}
           </CardHeader>
           <CardContent className="p-0 pt-4">
+            {device.storageSummary ? (
+              <div className="mx-5 mb-4 grid gap-2 rounded-xl bg-ink-50/70 p-3 sm:grid-cols-4">
+                <div className="rounded-lg bg-white px-3 py-2">
+                  <p className="text-[11px] text-ink-400">تعداد مسیرها</p>
+                  <p className="text-sm font-semibold text-ink-800">
+                    {formatNumber(device.storageSummary.filesTotal)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white px-3 py-2">
+                  <p className="text-[11px] text-ink-400">حجم ثبت‌شده</p>
+                  <p className="text-sm font-semibold text-ink-800">
+                    {formatBytes(device.storageSummary.totalBytes)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white px-3 py-2">
+                  <p className="text-[11px] text-ink-400">مسیرهای دارای هشدار</p>
+                  <p className="text-sm font-semibold text-ink-800">
+                    {formatNumber(device.storageSummary.unavailableCount)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white px-3 py-2">
+                  <p className="text-[11px] text-ink-400">آخرین بررسی</p>
+                  <p className="text-sm font-semibold text-ink-800">
+                    {device.storageSummary.lastCheckedAt
+                      ? formatJalaliDateTime(device.storageSummary.lastCheckedAt)
+                      : '—'}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {primaryFile ? (
+              <div className="mx-5 mb-4 rounded-xl border border-brand-100 bg-brand-50/40 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <FolderOpen className="size-4 text-brand-600" />
+                      <span className="text-sm font-semibold text-ink-900">پوشه اختصاصی دستگاه</span>
+                      <Badge variant={accessStatusVariant(primaryFile.accessStatus)}>
+                        {accessStatusLabel(primaryFile.accessStatus)}
+                      </Badge>
+                      {primaryFile.storageLocation ? (
+                        <Badge>{primaryFile.storageLocation.name}</Badge>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      dir="ltr"
+                      onClick={() => void copyPath(primaryFile.clientPath ?? primaryFile.path)}
+                      className="mt-2 inline-flex items-start gap-1 break-all text-start text-xs text-brand-700 hover:underline"
+                    >
+                      <Copy className="mt-0.5 size-3 shrink-0" />
+                      {primaryFile.clientPath ?? primaryFile.path}
+                    </button>
+                    {primaryFile.clientPath ? (
+                      <p className="mt-1 break-all text-[11px] text-ink-400" dir="ltr">
+                        {primaryFile.path}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void openFolder(primaryFile)}
+                      loading={fileBusy === `open-${primaryFile.id}`}
+                    >
+                      <FolderOpen className="size-4" />
+                      بازکردن پوشه
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void checkFileAccess(primaryFile)}
+                      loading={fileBusy === `check-${primaryFile.id}`}
+                    >
+                      <RefreshCw className="size-4" />
+                      بررسی دسترسی
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : canManageFiles ? (
+              <div className="mx-5 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-800">
+                پوشه اختصاصی این دستگاه ساخته نشده است. با دکمه «ایجاد پوشه دستگاه» مسیر سال/کد پذیرش
+                و زیرپوشه‌های پیش‌فرض ساخته می‌شوند.
+              </div>
+            ) : null}
+
             {device.files.length === 0 ? (
               <EmptyState
                 icon={<FileText className="size-6" />}
@@ -687,14 +866,16 @@ export function DeviceDetailPage() {
                 description="پس از بکاپ‌گیری، مسیر فایل‌ها را ثبت کنید تا در تحویل دستگاه قابل پیگیری باشد."
               />
             ) : (
-              <Table className="min-w-[820px]">
+              <Table className="min-w-[1060px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>عنوان</TableHead>
+                    <TableHead>دسته</TableHead>
                     <TableHead>مسیر</TableHead>
-                    <TableHead>محل ذخیره</TableHead>
+                    <TableHead>حجم</TableHead>
+                    <TableHead>بکاپ</TableHead>
+                    <TableHead>دسترسی</TableHead>
                     <TableHead>اقدام مرتبط</TableHead>
-                    <TableHead>ثبت‌کننده</TableHead>
                     {canFiles ? <TableHead className="text-end">عملیات</TableHead> : null}
                   </TableRow>
                 </TableHeader>
@@ -702,33 +883,53 @@ export function DeviceDetailPage() {
                   {device.files.map((file) => (
                     <TableRow key={file.id}>
                       <TableCell className="text-xs font-medium text-ink-800">
-                        {file.label}
+                        <div className="flex items-center gap-1.5">
+                          {file.label}
+                          {file.isPrimary ? <Badge variant="brand">اصلی</Badge> : null}
+                        </div>
                         {file.notes ? (
                           <p className="mt-0.5 text-[11px] text-ink-500">{file.notes}</p>
                         ) : null}
                       </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs text-ink-500">
+                        {folderCategoryLabel(file.category)}
+                      </TableCell>
                       <TableCell className="max-w-[280px] text-xs">
                         <button
                           type="button"
-                          onClick={() => void copyPath(file.path)}
+                          onClick={() => void copyPath(file.clientPath ?? file.path)}
                           className="inline-flex items-center gap-1 break-all text-start text-brand-700 hover:underline"
                           dir="ltr"
                         >
                           <Copy className="size-3 shrink-0" />
-                          {file.path}
+                          {file.clientPath ?? file.path}
                         </button>
+                        {file.alternativePath ? (
+                          <p className="mt-1 break-all text-[10px] text-ink-400" dir="ltr">
+                            جایگزین: {file.alternativePath}
+                          </p>
+                        ) : null}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-ink-600">
-                        {STORAGE_KIND_LABELS[file.storageKind] ?? file.storageKind}
+                      <TableCell className="whitespace-nowrap text-xs text-ink-500">
+                        {file.sizeBytes === null ? '—' : formatBytes(file.sizeBytes)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={backupStatusVariant(file.backupStatus)}>
+                          {backupStatusLabel(file.backupStatus)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={accessStatusVariant(file.accessStatus)}>
+                          {accessStatusLabel(file.accessStatus)}
+                        </Badge>
+                        {file.lastCheckedAt ? (
+                          <p className="mt-1 whitespace-nowrap text-[10px] text-ink-400">
+                            {formatJalaliDate(file.lastCheckedAt)}
+                          </p>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-xs text-ink-500">
                         {file.relatedOperationTitle ?? '—'}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-ink-500">
-                        {file.createdByName ?? '—'}
-                        <span className="block text-[11px] text-ink-400">
-                          {formatJalaliDate(file.createdAt)}
-                        </span>
                       </TableCell>
                       {canFiles ? (
                         <TableCell>
@@ -736,22 +937,48 @@ export function DeviceDetailPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              aria-label="ویرایش مسیر فایل"
-                              onClick={() => {
-                                setEditingFileId(file.id);
-                                setFileOpen(true);
-                              }}
+                              aria-label="بازکردن پوشه"
+                              onClick={() => void openFolder(file)}
+                              loading={fileBusy === `open-${file.id}`}
                             >
-                              <Pencil className="size-4" />
+                              <FolderOpen className="size-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              aria-label="حذف مسیر فایل"
-                              onClick={() => setPendingDelete({ kind: 'file', id: file.id, title: file.label })}
+                              aria-label="بررسی دسترسی"
+                              onClick={() => void checkFileAccess(file)}
+                              loading={fileBusy === `check-${file.id}`}
                             >
-                              <Trash2 className="size-4 text-rose-600" />
+                              <RefreshCw className="size-4" />
                             </Button>
+                            {canManageFiles ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="ویرایش مسیر فایل"
+                                  onClick={() => {
+                                    setEditingFileId(file.id);
+                                    setFileOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                                {!file.isPrimary ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="حذف مسیر فایل"
+                                    onClick={() =>
+                                      setPendingDelete({ kind: 'file', id: file.id, title: file.label })
+                                    }
+                                  >
+                                    <Trash2 className="size-4 text-rose-600" />
+                                  </Button>
+                                ) : null}
+                              </>
+                            ) : null}
                           </div>
                         </TableCell>
                       ) : null}
@@ -761,8 +988,8 @@ export function DeviceDetailPage() {
               </Table>
             )}
             <p className="border-t border-ink-100 px-5 py-3 text-[11px] leading-6 text-ink-400">
-              بازکردن مستقیم مسیرها روی رایانه کلاینت، در مرحله اتصال برنامه کمکی محلی فعال می‌شود.
-              تا آن زمان مسیرها قابل کپی و استفاده دستی هستند.
+              مسیر شبکه‌ای ثبت‌شده در محل ذخیره‌سازی مرجع است. برای بازکردن پوشه، برنامه کمکی ویندوز
+              روی کلاینت باید نصب شده باشد؛ مسیر را می‌توانید با کلیک روی آن کپی کنید.
             </p>
           </CardContent>
         </Card>
@@ -779,7 +1006,7 @@ export function DeviceDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {canFiles ? (
+            {canManageFiles ? (
               <div className="flex flex-wrap items-end gap-3 rounded-xl bg-ink-50 p-3">
                 <div className="min-w-[220px] flex-1">
                   <Label htmlFor="image-file">انتخاب تصویر</Label>
@@ -820,7 +1047,7 @@ export function DeviceDetailPage() {
                   <AuthenticatedImage
                     key={image.id}
                     image={image}
-                    canManage={canFiles}
+                    canManage={canManageFiles}
                     onDelete={() => setPendingDelete({ kind: 'image', id: image.id, title: image.originalName })}
                   />
                 ))}
@@ -920,6 +1147,7 @@ export function DeviceDetailPage() {
         deviceId={device.id}
         file={editingFile}
         operations={device.operations}
+        locations={locations}
         onSaved={(updated) => setDevice(updated)}
       />
 

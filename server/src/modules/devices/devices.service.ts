@@ -11,6 +11,7 @@ import { addDays, jalaliYear } from '../../common/utils/jalali';
 import type { PageResult } from '../../common/utils/pagination';
 import { AuditService, type AuditActor } from '../audit/audit.service';
 import { AUDIT_ACTIONS } from '../audit/audit.actions';
+import { StorageService } from '../storage/storage.service';
 import { CustomersRepository } from '../customers/customers.repository';
 import { SettingsService } from '../settings/settings.service';
 import {
@@ -33,6 +34,8 @@ import {
   type DeviceSummaryDto,
   type DuplicateDeviceDto,
 } from './devices.types';
+import type { AuthUser } from '../users/user.types';
+import { hasPermission, PERMISSIONS } from '../../common/permissions';
 
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 
@@ -80,6 +83,7 @@ export class DevicesService {
     private readonly customers: CustomersRepository,
     private readonly config: DeviceConfigService,
     private readonly settings: SettingsService,
+    private readonly storage: StorageService,
     private readonly audit: AuditService,
   ) {
     this.secretBox = new SecretBox(appConfig.deviceSecret);
@@ -111,13 +115,15 @@ export class DevicesService {
     });
   }
 
-  async getDetail(id: string): Promise<DeviceDetailDto> {
+  async getDetail(id: string, viewer?: AuthUser): Promise<DeviceDetailDto> {
     const row = await this.repo.findById(id);
     if (!row) {
       throw new AppException(ErrorCodes.NOT_FOUND, 'پرونده دستگاه پیدا نشد.', HttpStatus.NOT_FOUND);
     }
     const extras = await this.repo.detailAggregates(id);
     const summary = toDeviceSummary(row);
+    const canViewFiles = viewer ? canViewStorage(viewer) : false;
+    const storageSummary = canViewFiles ? await this.storage.getDeviceSummary(id) : null;
     return {
       ...summary,
       physicalCondition: row.physical_condition,
@@ -129,10 +135,12 @@ export class DevicesService {
       notes: row.notes,
       customFields: row.custom_fields ?? {},
       ...extras,
+      files: canViewFiles ? extras.files : [],
+      storageSummary,
     };
   }
 
-  async create(dto: CreateDeviceDto, actor: AuditActor): Promise<DeviceDetailDto> {
+  async create(dto: CreateDeviceDto, actor: AuditActor, viewer?: AuthUser): Promise<DeviceDetailDto> {
     const input = await this.buildInput(dto, null);
     const duplicates = await this.repo.findDuplicates({
       imei1: input.imei1,
@@ -156,6 +164,12 @@ export class DevicesService {
       { id: actor.id, username: actor.username },
     );
     const created = await this.repo.findById(id);
+    if (created) {
+      await this.storage.provisionDeviceFolders(
+        { id: created.id, intakeCode: created.intake_code, receivedAt: input.receivedAt },
+        actor,
+      );
+    }
 
     await this.audit.log({
       actor,
@@ -169,10 +183,15 @@ export class DevicesService {
         duplicateHistory: duplicates.length,
       },
     });
-    return this.getDetail(id);
+    return this.getDetail(id, viewer);
   }
 
-  async update(id: string, dto: UpdateDeviceDto, actor: AuditActor): Promise<DeviceDetailDto> {
+  async update(
+    id: string,
+    dto: UpdateDeviceDto,
+    actor: AuditActor,
+    viewer?: AuthUser,
+  ): Promise<DeviceDetailDto> {
     const existing = await this.repo.findById(id);
     if (!existing) {
       throw new AppException(ErrorCodes.NOT_FOUND, 'پرونده دستگاه پیدا نشد.', HttpStatus.NOT_FOUND);
@@ -221,13 +240,14 @@ export class DevicesService {
       description: `اطلاعات پرونده ${existing.intake_code} ویرایش شد.`,
       metadata: { fields: Object.keys(dto).filter((key) => key !== 'version' && key !== 'allowDuplicate') },
     });
-    return this.getDetail(id);
+    return this.getDetail(id, viewer);
   }
 
   async changeStatus(
     id: string,
     dto: ChangeDeviceStatusDto,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const existing = await this.repo.findById(id);
     if (!existing) {
@@ -265,7 +285,7 @@ export class DevicesService {
       description: `وضعیت پرونده ${existing.intake_code} به «${toLabel}» تغییر کرد.`,
       metadata: { from: existing.status, to: dto.status, note: dto.note ?? null },
     });
-    return this.getDetail(id);
+    return this.getDetail(id, viewer);
   }
 
   async revealPassword(id: string, actor: AuditActor): Promise<{ password: string | null }> {
@@ -295,6 +315,7 @@ export class DevicesService {
     id: string,
     dto: CreateOperationDto,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const existing = await this.requireDevice(id);
     await this.config.assertOption('operation_type', dto.operationType);
@@ -347,7 +368,7 @@ export class DevicesService {
         metadata: { from: existing.status, to: input.deviceStatusAfter },
       });
     }
-    return this.getDetail(id);
+    return this.getDetail(id, viewer);
   }
 
   async updateOperation(
@@ -355,6 +376,7 @@ export class DevicesService {
     operationId: string,
     dto: UpdateOperationDto,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     const operation = await this.repo.findOperation(deviceId, operationId);
@@ -389,13 +411,14 @@ export class DevicesService {
       description: `اقدام «${dto.title}» در پرونده ${device.intake_code} ویرایش شد.`,
       metadata: { operationId },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
   async removeOperation(
     deviceId: string,
     operationId: string,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     const operation = await this.repo.findOperation(deviceId, operationId);
@@ -411,13 +434,14 @@ export class DevicesService {
       description: `اقدام «${operation.title}» از پرونده ${device.intake_code} حذف شد.`,
       metadata: { operationId },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
   async addFile(
     deviceId: string,
     dto: CreateDeviceFileDto,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     if (dto.relatedOperationId) {
@@ -430,12 +454,12 @@ export class DevicesService {
         );
       }
     }
+    const input = await this.buildFileInput(dto);
     const file = await this.repo.createFile(
       deviceId,
       {
         label: dto.label.trim(),
-        path: dto.path.trim(),
-        storageKind: dto.storageKind ?? 'network',
+        ...input,
         relatedOperationId: dto.relatedOperationId ?? null,
         notes: clean(dto.notes),
       },
@@ -447,9 +471,16 @@ export class DevicesService {
       entityType: 'device',
       entityId: deviceId,
       description: `مسیر فایل «${file?.label ?? dto.label}» برای پرونده ${device.intake_code} ثبت شد.`,
-      metadata: { fileId: file?.id, path: dto.path },
+      metadata: {
+        fileId: file?.id,
+        path: input.path,
+        clientPath: input.clientPath,
+        relativePath: input.relativePath,
+        category: input.category,
+        backupStatus: input.backupStatus,
+      },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
   async updateFile(
@@ -457,6 +488,7 @@ export class DevicesService {
     fileId: string,
     dto: UpdateDeviceFileDto,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     const file = await this.repo.findFile(deviceId, fileId);
@@ -473,10 +505,10 @@ export class DevicesService {
         );
       }
     }
+    const input = await this.buildFileInput(dto, file);
     await this.repo.updateFile(deviceId, fileId, {
       label: dto.label.trim(),
-      path: dto.path.trim(),
-      storageKind: dto.storageKind ?? file.storage_kind,
+      ...input,
       relatedOperationId: dto.relatedOperationId ?? null,
       notes: clean(dto.notes),
     });
@@ -486,20 +518,44 @@ export class DevicesService {
       entityType: 'device',
       entityId: deviceId,
       description: `مسیر فایل «${dto.label}» در پرونده ${device.intake_code} ویرایش شد.`,
-      metadata: { fileId },
+      metadata: {
+        fileId,
+        from: {
+          path: file.path,
+          clientPath: file.client_path,
+          relativePath: file.relative_path,
+          alternativePath: file.alternative_path,
+          backupStatus: file.backup_status,
+        },
+        to: {
+          path: input.path,
+          clientPath: input.clientPath,
+          relativePath: input.relativePath,
+          alternativePath: input.alternativePath,
+          backupStatus: input.backupStatus,
+        },
+      },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
   async removeFile(
     deviceId: string,
     fileId: string,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     const file = await this.repo.findFile(deviceId, fileId);
     if (!file) {
       throw new AppException(ErrorCodes.NOT_FOUND, 'فایل مورد نظر پیدا نشد.', HttpStatus.NOT_FOUND);
+    }
+    if (file.is_primary) {
+      throw new AppException(
+        ErrorCodes.VALIDATION_ERROR,
+        'پوشه اصلی دستگاه قابل حذف نیست؛ برای بازسازی مسیر از دکمه ایجاد/بازسازی پوشه استفاده کنید.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     await this.repo.softDeleteFile(deviceId, fileId);
     await this.audit.log({
@@ -508,12 +564,23 @@ export class DevicesService {
       entityType: 'device',
       entityId: deviceId,
       description: `مسیر فایل «${file.label}» از پرونده ${device.intake_code} حذف شد.`,
-      metadata: { fileId },
+      metadata: {
+        fileId,
+        path: file.path,
+        relativePath: file.relative_path,
+        clientPath: file.client_path,
+        alternativePath: file.alternative_path,
+      },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
-  async addNote(deviceId: string, body: string, actor: AuditActor): Promise<DeviceDetailDto> {
+  async addNote(
+    deviceId: string,
+    body: string,
+    actor: AuditActor,
+    viewer?: AuthUser,
+  ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     await this.repo.createNote(deviceId, body.trim(), { id: actor.id, username: actor.username });
     await this.audit.log({
@@ -523,10 +590,15 @@ export class DevicesService {
       entityId: deviceId,
       description: `یادداشت تکنسین برای پرونده ${device.intake_code} ثبت شد.`,
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
-  async removeNote(deviceId: string, noteId: string, actor: AuditActor): Promise<DeviceDetailDto> {
+  async removeNote(
+    deviceId: string,
+    noteId: string,
+    actor: AuditActor,
+    viewer?: AuthUser,
+  ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     const removed = await this.repo.deleteNote(deviceId, noteId);
     if (!removed) {
@@ -540,7 +612,7 @@ export class DevicesService {
       description: `یادداشت تکنسین از پرونده ${device.intake_code} حذف شد.`,
       metadata: { noteId },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
   async addImage(
@@ -548,6 +620,7 @@ export class DevicesService {
     file: UploadedImageFile | undefined,
     caption: string | undefined,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     if (!file) {
@@ -593,7 +666,7 @@ export class DevicesService {
       description: `تصویر «${image?.originalName ?? fileName}» به پرونده ${device.intake_code} اضافه شد.`,
       metadata: { imageId: image?.id, sizeBytes: file.size },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
   }
 
   async resolveImage(
@@ -626,6 +699,7 @@ export class DevicesService {
     deviceId: string,
     imageId: string,
     actor: AuditActor,
+    viewer?: AuthUser,
   ): Promise<DeviceDetailDto> {
     const device = await this.requireDevice(deviceId);
     const image = await this.repo.findImage(deviceId, imageId);
@@ -643,7 +717,30 @@ export class DevicesService {
       description: `تصویر «${image.original_name}» از پرونده ${device.intake_code} حذف شد.`,
       metadata: { imageId },
     });
-    return this.getDetail(deviceId);
+    return this.getDetail(deviceId, viewer);
+  }
+
+  getStorageSummary(deviceId: string) {
+    return this.storage.getDeviceSummary(deviceId);
+  }
+
+  async previewStorage(deviceId: string) {
+    await this.requireDevice(deviceId);
+    return this.storage.previewDeviceFolder(deviceId);
+  }
+
+  async provisionStorage(deviceId: string, actor: AuditActor) {
+    await this.requireDevice(deviceId);
+    const file = await this.storage.provisionDeviceById(deviceId, actor);
+    return { file, summary: await this.storage.getDeviceSummary(deviceId) };
+  }
+
+  checkStorageFile(deviceId: string, fileId: string, actor: AuditActor) {
+    return this.storage.checkDeviceFile(deviceId, fileId, actor);
+  }
+
+  openStorageFile(deviceId: string, fileId: string, actor: AuditActor) {
+    return this.storage.createFileOpenTicket(deviceId, fileId, actor);
   }
 
   async exportExcel(
@@ -737,6 +834,72 @@ export class DevicesService {
     return {
       buffer: Buffer.from(buffer),
       fileName: `devices-${jalaliYear()}-${Date.now()}.xlsx`,
+    };
+  }
+
+  private async buildFileInput(
+    dto: CreateDeviceFileDto,
+    existing?: {
+      storage_location_id: string | null;
+      relative_path: string | null;
+      size_bytes: string | null;
+      category: string;
+      backup_status: string;
+      alternative_path: string | null;
+    },
+  ) {
+    let resolved: {
+      path: string;
+      clientPath: string | null;
+      relativePath: string | null;
+      storageKind: string;
+      storageLocationId: string | null;
+    };
+    if (dto.storageLocationId && dto.relativePath) {
+      resolved = await this.storage.resolveFileLocation(
+        dto.storageLocationId,
+        dto.relativePath,
+        dto.clientPath,
+      );
+    } else if (dto.storageLocationId || dto.relativePath) {
+      throw new AppException(
+        ErrorCodes.VALIDATION_ERROR,
+        'برای اتصال فایل به محل ذخیره‌سازی، هم محل و هم مسیر نسبی را وارد کنید.',
+        HttpStatus.BAD_REQUEST,
+      );
+    } else {
+      const manualPath = clean(dto.path);
+      if (!manualPath) {
+        throw new AppException(
+          ErrorCodes.VALIDATION_ERROR,
+          'مسیر فایل الزامی است.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      resolved = {
+        path: manualPath,
+        clientPath: clean(dto.clientPath),
+        relativePath: null,
+        storageKind: dto.storageKind ?? 'network',
+        storageLocationId: null,
+      };
+    }
+    return {
+      path: resolved.path,
+      clientPath: resolved.clientPath,
+      relativePath: resolved.relativePath,
+      storageKind: dto.storageKind ?? resolved.storageKind,
+      storageLocationId: resolved.storageLocationId,
+      category: dto.category ?? existing?.category ?? 'other',
+      sizeBytes:
+        dto.sizeBytes ?? (existing?.size_bytes === null || existing?.size_bytes === undefined
+          ? null
+          : Number(existing.size_bytes)),
+      backupStatus: dto.backupStatus ?? existing?.backup_status ?? 'none',
+      alternativePath:
+        dto.alternativePath !== undefined
+          ? clean(dto.alternativePath)
+          : (existing?.alternative_path ?? null),
     };
   }
 
@@ -861,6 +1024,13 @@ export class DevicesService {
       customFields,
     };
   }
+}
+
+function canViewStorage(user: AuthUser): boolean {
+  return (
+    hasPermission(user.permissions, PERMISSIONS.FILES_VIEW) ||
+    hasPermission(user.permissions, PERMISSIONS.FILES_MANAGE)
+  );
 }
 
 function formatExcelDate(value: Date): string {

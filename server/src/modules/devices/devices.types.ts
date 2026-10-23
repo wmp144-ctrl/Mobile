@@ -82,11 +82,25 @@ export interface DeviceFileRow {
   device_id: string;
   label: string;
   path: string;
+  relative_path: string | null;
+  client_path: string | null;
   storage_kind: string;
+  category: string;
+  size_bytes: string | null;
+  backup_status: string;
+  alternative_path: string | null;
+  access_status: string;
+  last_checked_at: Date | null;
+  is_primary: boolean;
+  storage_location_id: string | null;
+  storage_location_name: string | null;
+  storage_location_kind: string | null;
+  storage_location_root: string | null;
   related_operation_id: string | null;
   related_operation_title: string | null;
   notes: string | null;
   created_by_name: string | null;
+  version: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -181,7 +195,23 @@ export interface DeviceFileDto {
   id: string;
   label: string;
   path: string;
+  relativePath: string | null;
+  clientPath: string | null;
   storageKind: string;
+  category: string;
+  sizeBytes: number | null;
+  backupStatus: string;
+  alternativePath: string | null;
+  accessStatus: string;
+  lastCheckedAt: string | null;
+  isPrimary: boolean;
+  version: number;
+  storageLocation: {
+    id: string;
+    name: string;
+    kind: string;
+    rootPath: string;
+  } | null;
   relatedOperationId: string | null;
   relatedOperationTitle: string | null;
   notes: string | null;
@@ -229,6 +259,19 @@ export interface DeviceDetailDto extends DeviceSummaryDto {
   statusHistory: DeviceStatusHistoryDto[];
   operations: DeviceOperationDto[];
   files: DeviceFileDto[];
+  storageSummary: {
+    filesTotal: number;
+    totalBytes: number;
+    unavailableCount: number;
+    lastCheckedAt: string | null;
+    primaryFolder: {
+      id: string;
+      path: string;
+      clientPath: string | null;
+      accessStatus: string;
+      locationName: string | null;
+    } | null;
+  } | null;
   technicianNotes: DeviceNoteDto[];
   images: DeviceImageDto[];
 }
@@ -349,7 +392,25 @@ export function toFile(row: DeviceFileRow): DeviceFileDto {
     id: row.id,
     label: row.label,
     path: row.path,
+    relativePath: row.relative_path,
+    clientPath: row.client_path,
     storageKind: row.storage_kind,
+    category: row.category,
+    sizeBytes: row.size_bytes === null ? null : Number(row.size_bytes),
+    backupStatus: row.backup_status,
+    alternativePath: row.alternative_path,
+    accessStatus: row.access_status,
+    lastCheckedAt: row.last_checked_at ? row.last_checked_at.toISOString() : null,
+    isPrimary: row.is_primary,
+    version: row.version,
+    storageLocation: row.storage_location_id
+      ? {
+          id: row.storage_location_id,
+          name: row.storage_location_name ?? '',
+          kind: row.storage_location_kind ?? 'server',
+          rootPath: row.storage_location_root ?? '',
+        }
+      : null,
     relatedOperationId: row.related_operation_id,
     relatedOperationTitle: row.related_operation_title,
     notes: row.notes,

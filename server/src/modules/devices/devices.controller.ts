@@ -73,14 +73,58 @@ export class DevicesController {
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.REPAIRS_VIEW)
-  get(@Param('id', uuidPipe) id: string) {
-    return this.devices.getDetail(id);
+  get(@Param('id', uuidPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.devices.getDetail(id, user);
+  }
+
+  @Get(':id/storage')
+  @RequirePermissions(PERMISSIONS.FILES_VIEW)
+  storageSummary(@Param('id', uuidPipe) id: string) {
+    return this.devices.getStorageSummary(id);
+  }
+
+  @Get(':id/storage/preview')
+  @RequirePermissions(PERMISSIONS.FILES_VIEW)
+  storagePreview(@Param('id', uuidPipe) id: string) {
+    return this.devices.previewStorage(id);
+  }
+
+  @Post(':id/storage/provision')
+  @RequirePermissions(PERMISSIONS.FILES_MANAGE)
+  provisionStorage(@Param('id', uuidPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.devices.provisionStorage(id, { id: user.id, username: user.username });
+  }
+
+  @Post(':id/files/:fileId/check')
+  @RequirePermissions(PERMISSIONS.FILES_VIEW)
+  checkFile(
+    @Param('id', uuidPipe) id: string,
+    @Param('fileId', uuidPipe) fileId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.devices.checkStorageFile(id, fileId, {
+      id: user.id,
+      username: user.username,
+    });
+  }
+
+  @Post(':id/files/:fileId/open-ticket')
+  @RequirePermissions(PERMISSIONS.FILES_VIEW)
+  openFileTicket(
+    @Param('id', uuidPipe) id: string,
+    @Param('fileId', uuidPipe) fileId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.devices.openStorageFile(id, fileId, {
+      id: user.id,
+      username: user.username,
+    });
   }
 
   @Post()
   @RequirePermissions(PERMISSIONS.REPAIRS_MANAGE)
   create(@Body() dto: CreateDeviceDto, @CurrentUser() user: AuthUser) {
-    return this.devices.create(dto, { id: user.id, username: user.username });
+    return this.devices.create(dto, { id: user.id, username: user.username }, user);
   }
 
   @Patch(':id')
@@ -90,7 +134,7 @@ export class DevicesController {
     @Body() dto: UpdateDeviceDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.update(id, dto, { id: user.id, username: user.username });
+    return this.devices.update(id, dto, { id: user.id, username: user.username }, user);
   }
 
   @Patch(':id/status')
@@ -100,7 +144,7 @@ export class DevicesController {
     @Body() dto: ChangeDeviceStatusDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.changeStatus(id, dto, { id: user.id, username: user.username });
+    return this.devices.changeStatus(id, dto, { id: user.id, username: user.username }, user);
   }
 
   @Get(':id/password')
@@ -116,7 +160,7 @@ export class DevicesController {
     @Body() dto: CreateOperationDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.addOperation(id, dto, { id: user.id, username: user.username });
+    return this.devices.addOperation(id, dto, { id: user.id, username: user.username }, user);
   }
 
   @Patch(':id/operations/:operationId')
@@ -127,10 +171,13 @@ export class DevicesController {
     @Body() dto: UpdateOperationDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.updateOperation(id, operationId, dto, {
-      id: user.id,
-      username: user.username,
-    });
+    return this.devices.updateOperation(
+      id,
+      operationId,
+      dto,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 
   @Delete(':id/operations/:operationId')
@@ -140,10 +187,12 @@ export class DevicesController {
     @Param('operationId', uuidPipe) operationId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.removeOperation(id, operationId, {
-      id: user.id,
-      username: user.username,
-    });
+    return this.devices.removeOperation(
+      id,
+      operationId,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 
   @Post(':id/files')
@@ -153,7 +202,7 @@ export class DevicesController {
     @Body() dto: CreateDeviceFileDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.addFile(id, dto, { id: user.id, username: user.username });
+    return this.devices.addFile(id, dto, { id: user.id, username: user.username }, user);
   }
 
   @Patch(':id/files/:fileId')
@@ -164,7 +213,13 @@ export class DevicesController {
     @Body() dto: UpdateDeviceFileDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.updateFile(id, fileId, dto, { id: user.id, username: user.username });
+    return this.devices.updateFile(
+      id,
+      fileId,
+      dto,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 
   @Delete(':id/files/:fileId')
@@ -174,7 +229,12 @@ export class DevicesController {
     @Param('fileId', uuidPipe) fileId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.removeFile(id, fileId, { id: user.id, username: user.username });
+    return this.devices.removeFile(
+      id,
+      fileId,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 
   @Post(':id/notes')
@@ -184,7 +244,7 @@ export class DevicesController {
     @Body() dto: CreateDeviceNoteDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.addNote(id, dto.body, { id: user.id, username: user.username });
+    return this.devices.addNote(id, dto.body, { id: user.id, username: user.username }, user);
   }
 
   @Delete(':id/notes/:noteId')
@@ -194,7 +254,12 @@ export class DevicesController {
     @Param('noteId', uuidPipe) noteId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.removeNote(id, noteId, { id: user.id, username: user.username });
+    return this.devices.removeNote(
+      id,
+      noteId,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 
   @Post(':id/images')
@@ -220,10 +285,13 @@ export class DevicesController {
     @Body() dto: UploadDeviceImageDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.addImage(id, file, dto.caption, {
-      id: user.id,
-      username: user.username,
-    });
+    return this.devices.addImage(
+      id,
+      file,
+      dto.caption,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 
   @Get(':id/images/:imageId/file')
@@ -246,6 +314,11 @@ export class DevicesController {
     @Param('imageId', uuidPipe) imageId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.devices.removeImage(id, imageId, { id: user.id, username: user.username });
+    return this.devices.removeImage(
+      id,
+      imageId,
+      { id: user.id, username: user.username },
+      user,
+    );
   }
 }

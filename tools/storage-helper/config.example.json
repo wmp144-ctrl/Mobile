@@ -1,0 +1,5 @@
+{
+  "allowedServers": ["http://192.168.1.10:3000"],
+  "openWith": "explorer.exe",
+  "logPath": "%LOCALAPPDATA%\\RepairDeskHelper\\helper.log"
+}

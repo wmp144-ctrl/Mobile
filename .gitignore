@@ -18,6 +18,11 @@ test-backups/
 test-tools/
 uploads/
 test-uploads/
+/storage/
+/server/storage/
+/server/test-storage/
+/server/storage-smoke/
+/server/uploads-smoke/
 .pgdev-uploads/
 .pgtest-data/
 .pgdev-data/

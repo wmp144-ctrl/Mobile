@@ -101,7 +101,14 @@ export interface OperationChanges extends Partial<Omit<OperationInput, 'deviceSt
 export interface FileInput {
   label: string;
   path: string;
+  relativePath: string | null;
+  clientPath: string | null;
   storageKind: string;
+  category: string;
+  sizeBytes: number | null;
+  backupStatus: string;
+  alternativePath: string | null;
+  storageLocationId: string | null;
   relatedOperationId: string | null;
   notes: string | null;
 }
@@ -566,14 +573,20 @@ export class DevicesRepository {
 
   async listFiles(deviceId: string): Promise<DeviceFileDto[]> {
     const rows = await this.db.query<DeviceFileRow>(
-      `SELECT f.id, f.device_id, f.label, f.path, f.storage_kind, f.related_operation_id,
-              o.title AS related_operation_title, f.notes, u.full_name AS created_by_name,
-              f.created_at, f.updated_at
+      `SELECT f.id, f.device_id, f.label, f.path, f.relative_path, f.client_path,
+              f.storage_kind, f.category, f.size_bytes::text AS size_bytes, f.backup_status,
+              f.alternative_path, f.access_status, f.last_checked_at, f.is_primary,
+              f.storage_location_id,
+              s.name AS storage_location_name, s.kind AS storage_location_kind,
+              s.root_path AS storage_location_root,
+              f.related_operation_id, o.title AS related_operation_title, f.notes,
+              u.full_name AS created_by_name, f.version, f.created_at, f.updated_at
          FROM device_files f
          LEFT JOIN users u ON u.id = f.created_by
          LEFT JOIN device_operations o ON o.id = f.related_operation_id
+         LEFT JOIN storage_locations s ON s.id = f.storage_location_id
         WHERE f.device_id = $1 AND f.deleted_at IS NULL
-        ORDER BY f.created_at DESC`,
+        ORDER BY f.is_primary DESC, f.created_at ASC`,
       [deviceId],
     );
     return rows.map(toFile);
@@ -581,12 +594,18 @@ export class DevicesRepository {
 
   async findFile(deviceId: string, fileId: string): Promise<DeviceFileRow | null> {
     return this.db.queryOne<DeviceFileRow>(
-      `SELECT f.id, f.device_id, f.label, f.path, f.storage_kind, f.related_operation_id,
-              o.title AS related_operation_title, f.notes, u.full_name AS created_by_name,
-              f.created_at, f.updated_at
+      `SELECT f.id, f.device_id, f.label, f.path, f.relative_path, f.client_path,
+              f.storage_kind, f.category, f.size_bytes::text AS size_bytes, f.backup_status,
+              f.alternative_path, f.access_status, f.last_checked_at, f.is_primary,
+              f.storage_location_id,
+              s.name AS storage_location_name, s.kind AS storage_location_kind,
+              s.root_path AS storage_location_root,
+              f.related_operation_id, o.title AS related_operation_title, f.notes,
+              u.full_name AS created_by_name, f.version, f.created_at, f.updated_at
          FROM device_files f
          LEFT JOIN users u ON u.id = f.created_by
          LEFT JOIN device_operations o ON o.id = f.related_operation_id
+         LEFT JOIN storage_locations s ON s.id = f.storage_location_id
         WHERE f.device_id = $1 AND f.id = $2 AND f.deleted_at IS NULL`,
       [deviceId, fileId],
     );
@@ -599,14 +618,23 @@ export class DevicesRepository {
   ): Promise<DeviceFileRow | null> {
     const inserted = await this.db.queryOne<{ id: string }>(
       `INSERT INTO device_files
-         (device_id, label, path, storage_kind, related_operation_id, notes, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (device_id, label, path, relative_path, client_path, storage_kind, category,
+          size_bytes, backup_status, alternative_path, storage_location_id,
+          related_operation_id, notes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING id`,
       [
         deviceId,
         input.label,
         input.path,
+        input.relativePath,
+        input.clientPath,
         input.storageKind,
+        input.category,
+        input.sizeBytes,
+        input.backupStatus,
+        input.alternativePath,
+        input.storageLocationId,
         input.relatedOperationId,
         input.notes,
         createdBy,
@@ -628,13 +656,21 @@ export class DevicesRepository {
     };
     if (changes.label !== undefined) set('label', changes.label);
     if (changes.path !== undefined) set('path', changes.path);
+    if (changes.relativePath !== undefined) set('relative_path', changes.relativePath);
+    if (changes.clientPath !== undefined) set('client_path', changes.clientPath);
     if (changes.storageKind !== undefined) set('storage_kind', changes.storageKind);
+    if (changes.category !== undefined) set('category', changes.category);
+    if (changes.sizeBytes !== undefined) set('size_bytes', changes.sizeBytes);
+    if (changes.backupStatus !== undefined) set('backup_status', changes.backupStatus);
+    if (changes.alternativePath !== undefined) set('alternative_path', changes.alternativePath);
+    if (changes.storageLocationId !== undefined)
+      set('storage_location_id', changes.storageLocationId);
     if (changes.relatedOperationId !== undefined)
       set('related_operation_id', changes.relatedOperationId);
     if (changes.notes !== undefined) set('notes', changes.notes);
     if (sets.length === 0) return true;
 
-    sets.push('updated_at = now()');
+    sets.push('version = version + 1', 'updated_at = now()');
     params.push(deviceId, fileId);
     const updated = await this.db.queryOne<{ id: string }>(
       `UPDATE device_files

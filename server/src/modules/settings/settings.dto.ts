@@ -1,5 +1,18 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Length, Matches, Max, MaxLength, Min } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+const SAFE_FOLDER_NAME = /^(?!.*\.\.)(?!.*[<>:"/\\|?*\u0000-\u001F]).{1,40}$/;
 
 export class UpdateSettingsDto {
   @IsOptional()
@@ -64,4 +77,29 @@ export class UpdateSettingsDto {
   @Min(0, { message: 'مهلت پیش‌فرض تحویل نمی‌تواند منفی باشد.' })
   @Max(180, { message: 'مهلت پیش‌فرض تحویل حداکثر ۱۸۰ روز است.' })
   defaultDueDays?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120, { message: 'الگوی ساختار پوشه حداکثر ۱۲۰ نویسه است.' })
+  @Matches(/^(?!.*\.\.)(?=.*\{intakeCode\})[A-Za-z0-9_{}\-/\\ ]+$/, {
+    message: 'الگوی پوشه فقط می‌تواند شامل {year}، {intakeCode}، حروف انگلیسی، رقم و خط تیره باشد.',
+  })
+  storageFolderLayout?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12, { message: 'حداکثر ۱۲ زیرپوشه قابل تعریف است.' })
+  @IsString({ each: true })
+  @Matches(SAFE_FOLDER_NAME, {
+    each: true,
+    message: 'نام زیرپوشه باید بین ۱ تا ۴۰ نویسه و بدون نویسه‌های غیرمجاز باشد.',
+  })
+  storageSubfolders?: string[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'آستانه هشدار فضای آزاد باید عدد صحیح باشد.' })
+  @Min(1, { message: 'آستانه هشدار فضای آزاد حداقل ۱ گیگابایت است.' })
+  @Max(100000, { message: 'آستانه هشدار فضای آزاد حداکثر ۱۰۰۰۰۰ گیگابایت است.' })
+  storageLowSpaceGb?: number;
 }

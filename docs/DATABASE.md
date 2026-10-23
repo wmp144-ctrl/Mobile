@@ -1,4 +1,4 @@
-# طراحی پایگاه داده — مرحله ۱ و ۲
+# طراحی پایگاه داده — مراحل ۱ تا ۳
 
 پایگاه داده: PostgreSQL ۱۸ (سازگار با ۱۵ به بعد)
 کدگذاری: UTF-8
@@ -32,6 +32,9 @@
 
   field_definitions و option_lists ← تعریف فرم پذیرش و فهرست‌های کشویی
   intake_counters ← شمارنده کد پذیرش به تفکیک سال
+
+  storage_locations 1 ──── n device_files  (مسیر مرجع، مسیر کلاینتی، وضعیت دسترسی)
+  storage_open_tickets ← بلیت یک‌بارمصرف بازکردن پوشه برای برنامه کمکی
 ```
 
 ## جداول
@@ -101,7 +104,9 @@
 
 تنظیمات پیش‌فرض: `workshop.name`، `security.idleTimeoutMinutes` (۱۰)،
 `security.maxFailedLogins` (۵)، `security.lockoutMinutes` (۱۵)، `security.sessionDays` (۷)،
-`backup.retentionCount` (۱۴)، `devices.intakePrefix` (`MR`) و `devices.defaultDueDays` (۳).
+`backup.retentionCount` (۱۴)، `devices.intakePrefix` (`MR`)، `devices.defaultDueDays` (۳)،
+`storage.folderLayout` (`{year}/{intakeCode}`)، `storage.subfolders` (شش زیرپوشه پیش‌فرض) و
+`storage.lowSpaceGb` (۵).
 
 ### `customers`
 | ستون | نوع | توضیح |
@@ -188,12 +193,52 @@
 | id | uuid PK | شناسه |
 | device_id | uuid FK → devices | دستگاه |
 | label | text | عنوان مسیر (مثل «بکاپ تصاویر») |
-| path | text | مسیر ذخیره‌سازی |
+| path | text | مسیر کامل مرجع روی سرور |
+| relative_path | text | مسیر نسبی داخل محل ذخیره‌سازی |
+| client_path | text | مسیر قابل دسترس در کلاینت (UNC یا درایو نگاشت‌شده) |
+| storage_location_id | uuid FK → storage_locations | محل ذخیره‌سازی (اختیاری) |
 | storage_kind | text | `network` / `local` / `external` |
+| category | text | root / original / backup / recovered / report / image / document / other |
+| size_bytes | bigint | حجم محاسبه‌شده مسیر |
+| backup_status | text | none / pending / in_progress / completed / failed |
+| alternative_path | text | مسیر جایگزین پس از جابه‌جایی |
+| access_status | text | unknown / ok / missing / unavailable |
+| last_checked_at | timestamptz | آخرین بررسی دسترسی |
+| is_primary | boolean | پوشه اصلی دستگاه (ایندکس یکتای جزئی) |
 | related_operation_id | uuid FK → device_operations | اقدام مرتبط (اختیاری) |
 | notes | text | توضیح |
+| version | integer | شماره نسخه ردیف |
 | created_by / created_at / updated_at | uuid / timestamptz | ثبت‌کننده و زمان‌ها |
 | deleted_at | timestamptz | حذف نرم |
+
+### `storage_locations`
+| ستون | نوع | توضیح |
+| --- | --- | --- |
+| id | uuid PK | شناسه |
+| name | text | نام محل (مثلاً «هارد بکاپ اصلی») |
+| root_path | text | مسیر ریشه از دید سرور |
+| client_root | text | مسیر ریشه قابل دسترس در کلاینت |
+| kind | text | server / nas / external |
+| drive_letter / volume_label / volume_id / host_name | text | شناسه‌های درایو، حافظه و میزبان |
+| notes | text | محل نگهداری فیزیکی و توضیحات |
+| is_default | boolean | محل ساخت پوشه دستگاه‌های جدید (یکتا با ایندکس جزئی) |
+| is_active | boolean | قابل استفاده بودن |
+| last_checked_at / last_success_at | timestamptz | آخرین بررسی و آخرین دسترسی موفق |
+| last_check_ok / last_check_error | boolean / text | نتیجه و پیام آخرین سلامت‌سنجی |
+| version | integer | کنترل تداخل |
+| created_by / created_at / updated_at | uuid / timestamptz | ثبت‌کننده و زمان‌ها |
+| deleted_at | timestamptz | حذف نرم |
+
+### `storage_open_tickets`
+| ستون | نوع | توضیح |
+| --- | --- | --- |
+| id | uuid PK | شناسه |
+| token_hash | text UNIQUE | SHA-256 بلیت؛ مقدار خام ذخیره نمی‌شود |
+| device_file_id | uuid FK → device_files | مسیر مبدأ (برای ریشه حافظه NULL) |
+| path / client_path | text | مسیر مجاز snapshot‌شده در زمان صدور |
+| requested_by | uuid FK → users | کاربر درخواست‌دهنده |
+| expires_at / consumed_at | timestamptz | انقضا و زمان مصرف یک‌بارمصرف |
+| created_at | timestamptz | زمان صدور |
 
 ### `device_images`
 | ستون | نوع | توضیح |
@@ -247,14 +292,16 @@
 | فایل | محتوا |
 | --- | --- |
 | `001_initial_schema.sql` | جداول پایه، ایندکس‌ها، نقش‌ها و تنظیمات پیش‌فرض |
-| `002_seed_roles_permissions.sql` | تنظیم مجوزهای نقش‌های سیستمی و نقش «مدیر کل» |
+| `002_seed_system_roles.sql` | تعریف نقش‌های سیستمی و مجوزهای پیش‌فرض |
 | `003_customers_devices.sql` | مشتریان، تجهیزات، تاریخچه وضعیت، اقدامات، فایل‌ها، تصاویر، یادداشت‌ها، تعریف فیلدها و فهرست گزینه‌ها |
+| `004_storage_files.sql` | محل‌های ذخیره‌سازی، متادیتای فایل و بلیت بازکردن پوشه، تنظیمات پوشه و مجوز `files.view` |
 
 ## مجوزهای تعریف‌شده
 
 `dashboard.view`، `users.view`، `users.manage`، `roles.view`، `roles.manage`، `settings.view`،
 `settings.manage`، `audit.view`، `backups.manage`، `customers.view/manage`، `repairs.view/manage`،
-`files.manage` و مجوزهای آینده: `inventory.view/manage`، `invoices.view/manage`، `reports.view`.
+`files.view`، `files.manage` و مجوزهای آینده: `inventory.view/manage`، `invoices.view/manage`،
+`reports.view`.
 
 نقش‌های پیش‌فرض: مدیر کل (`*`)، سرپرست تعمیرات، تکنسین، پذیرش، انباردار. ساخت نقش سفارشی با
 انتخاب مجوزها نیز پشتیبانی می‌شود.

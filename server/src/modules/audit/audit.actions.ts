@@ -42,6 +42,14 @@ export const AUDIT_ACTIONS = {
   DEVICE_OPTION_CREATED: 'device_config.option_created',
   DEVICE_OPTION_UPDATED: 'device_config.option_updated',
   DEVICE_OPTION_DELETED: 'device_config.option_deleted',
+  STORAGE_LOCATION_CREATED: 'storage.location_created',
+  STORAGE_LOCATION_UPDATED: 'storage.location_updated',
+  STORAGE_LOCATION_DELETED: 'storage.location_deleted',
+  STORAGE_LOCATION_CHECKED: 'storage.location_checked',
+  STORAGE_FOLDER_CREATED: 'storage.folder_created',
+  STORAGE_FOLDER_FAILED: 'storage.folder_failed',
+  STORAGE_FILE_CHECKED: 'storage.file_checked',
+  STORAGE_OPEN_REQUESTED: 'storage.open_requested',
 } as const;
 
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
@@ -88,6 +96,14 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   [AUDIT_ACTIONS.DEVICE_OPTION_CREATED]: 'افزودن گزینه فهرست',
   [AUDIT_ACTIONS.DEVICE_OPTION_UPDATED]: 'ویرایش گزینه فهرست',
   [AUDIT_ACTIONS.DEVICE_OPTION_DELETED]: 'حذف گزینه فهرست',
+  [AUDIT_ACTIONS.STORAGE_LOCATION_CREATED]: 'افزودن محل ذخیره‌سازی',
+  [AUDIT_ACTIONS.STORAGE_LOCATION_UPDATED]: 'ویرایش محل ذخیره‌سازی',
+  [AUDIT_ACTIONS.STORAGE_LOCATION_DELETED]: 'حذف محل ذخیره‌سازی',
+  [AUDIT_ACTIONS.STORAGE_LOCATION_CHECKED]: 'بررسی سلامت محل ذخیره‌سازی',
+  [AUDIT_ACTIONS.STORAGE_FOLDER_CREATED]: 'ساخت پوشه دستگاه',
+  [AUDIT_ACTIONS.STORAGE_FOLDER_FAILED]: 'خطا در ساخت پوشه دستگاه',
+  [AUDIT_ACTIONS.STORAGE_FILE_CHECKED]: 'بررسی دسترسی مسیر فایل',
+  [AUDIT_ACTIONS.STORAGE_OPEN_REQUESTED]: 'درخواست بازکردن پوشه',
 };
 
 export function auditActionLabel(action: string): string {

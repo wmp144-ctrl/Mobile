@@ -17,7 +17,7 @@ interface DeviceResponse {
   hasPassword: boolean;
   owner: { id: string; fullName: string };
   operations: Array<{ id: string; title: string; version: number }>;
-  files: Array<{ id: string; label: string }>;
+  files: Array<{ id: string; label: string; isPrimary: boolean }>;
   technicianNotes: Array<{ id: string; body: string }>;
   images: Array<{ id: string; originalName: string }>;
   statusHistory: Array<{
@@ -357,7 +357,11 @@ describe('مدیریت تجهیزات، پذیرش و پرونده دیجیتا�
         storageKind: 'network',
       })
       .expect(201);
-    const fileId = (withFile.body as DeviceResponse).files[0].id;
+    const addedFile = (withFile.body as DeviceResponse).files.find(
+      (file) => file.label === 'بکاپ مخاطبین',
+    );
+    expect(addedFile).toBeDefined();
+    const fileId = addedFile!.id;
 
     const updated = await request(http)
       .patch(`/api/devices/${deviceId}/files/${fileId}`)
@@ -368,7 +372,9 @@ describe('مدیریت تجهیزات، پذیرش و پرونده دیجیتا�
         storageKind: 'network',
       })
       .expect(200);
-    expect((updated.body as DeviceResponse).files[0].label).toBe('بکاپ مخاطبین و پیامک');
+    expect(
+      (updated.body as DeviceResponse).files.find((file) => file.id === fileId)?.label,
+    ).toBe('بکاپ مخاطبین و پیامک');
 
     const withNote = await request(http)
       .post(`/api/devices/${deviceId}/notes`)
@@ -382,7 +388,9 @@ describe('مدیریت تجهیزات، پذیرش و پرونده دیجیتا�
       .delete(`/api/devices/${deviceId}/files/${fileId}`)
       .set(bearer(adminToken))
       .expect(200);
-    expect((withoutFile.body as DeviceResponse).files).toHaveLength(0);
+    expect(
+      (withoutFile.body as DeviceResponse).files.filter((file) => !file.isPrimary),
+    ).toHaveLength(0);
 
     const withoutNote = await request(http)
       .delete(`/api/devices/${deviceId}/notes/${noteId}`)

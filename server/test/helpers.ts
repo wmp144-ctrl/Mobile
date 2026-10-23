@@ -33,6 +33,12 @@ export async function resetDatabase(): Promise<void> {
   if (process.env.BACKUP_DIR) {
     fs.rmSync(process.env.BACKUP_DIR, { recursive: true, force: true });
   }
+  if (process.env.STORAGE_ROOT) {
+    fs.rmSync(process.env.STORAGE_ROOT, { recursive: true, force: true });
+  }
+  if (process.env.UPLOADS_DIR) {
+    fs.rmSync(process.env.UPLOADS_DIR, { recursive: true, force: true });
+  }
 }
 
 export async function createTestApp(): Promise<INestApplication> {

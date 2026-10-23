@@ -27,6 +27,7 @@ export interface AppConfig {
   pgDumpPath: string;
   backupCronEnabled: boolean;
   uploadsDir: string;
+  storageRoot: string;
   clientDist: string;
 }
 
@@ -68,6 +69,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     pgDumpPath: env.PG_DUMP_PATH ?? 'pg_dump',
     backupCronEnabled: readBool(env.BACKUP_CRON_ENABLED, true),
     uploadsDir: path.resolve(process.cwd(), env.UPLOADS_DIR ?? './uploads'),
+    // ریشه پیش‌فرض ذخیره‌سازی فایل دستگاه‌ها؛ در تنظیمات می‌توان محل دیگری تعریف کرد
+    storageRoot: path.resolve(process.cwd(), env.STORAGE_ROOT ?? './storage'),
     clientDist: path.resolve(__dirname, '..', '..', '..', 'client', 'dist'),
   };
 }

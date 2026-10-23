@@ -98,11 +98,18 @@ export interface DeviceSettings {
   defaultDueDays: number;
 }
 
+export interface StorageSettings {
+  folderLayout: string;
+  subfolders: string[];
+  lowSpaceGb: number;
+}
+
 export interface AppSettings {
   workshop: WorkshopSettings;
   security: SecuritySettings;
   backup: { retentionCount: number };
   devices: DeviceSettings;
+  storage: StorageSettings;
 }
 
 export interface BackupFile {
@@ -222,7 +229,23 @@ export interface DeviceFileEntry {
   id: string;
   label: string;
   path: string;
+  relativePath: string | null;
+  clientPath: string | null;
   storageKind: string;
+  category: string;
+  sizeBytes: number | null;
+  backupStatus: string;
+  alternativePath: string | null;
+  accessStatus: string;
+  lastCheckedAt: string | null;
+  isPrimary: boolean;
+  version: number;
+  storageLocation: {
+    id: string;
+    name: string;
+    kind: string;
+    rootPath: string;
+  } | null;
   relatedOperationId: string | null;
   relatedOperationTitle: string | null;
   notes: string | null;
@@ -258,8 +281,115 @@ export interface DeviceDetail extends DeviceSummary {
   statusHistory: DeviceStatusHistoryEntry[];
   operations: DeviceOperationEntry[];
   files: DeviceFileEntry[];
+  storageSummary: DeviceStorageSummary | null;
   technicianNotes: DeviceNoteEntry[];
   images: DeviceImageEntry[];
+}
+
+export interface DeviceStorageSummary {
+  filesTotal: number;
+  totalBytes: number;
+  unavailableCount: number;
+  lastCheckedAt: string | null;
+  primaryFolder: {
+    id: string;
+    path: string;
+    clientPath: string | null;
+    accessStatus: string;
+    locationName: string | null;
+  } | null;
+}
+
+export interface StorageHealth {
+  available: boolean;
+  writable: boolean;
+  totalBytes: number | null;
+  freeBytes: number | null;
+  usedBytes: number | null;
+  usagePercent: number | null;
+  lowSpace: boolean;
+  checkedAt: string;
+  lastSuccessAt: string | null;
+  error: string | null;
+}
+
+export interface StorageLocation {
+  id: string;
+  name: string;
+  rootPath: string;
+  clientRoot: string | null;
+  kind: 'server' | 'nas' | 'external';
+  driveLetter: string | null;
+  volumeLabel: string | null;
+  volumeId: string | null;
+  hostName: string | null;
+  notes: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  fileCount: number;
+  dataBytes: number;
+  version: number;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  health: StorageHealth;
+}
+
+export interface StorageFileEntry {
+  id: string;
+  deviceId: string;
+  intakeCode: string;
+  ownerName: string;
+  label: string;
+  path: string;
+  relativePath: string | null;
+  clientPath: string | null;
+  storageKind: string;
+  category: string;
+  sizeBytes: number | null;
+  backupStatus: string;
+  alternativePath: string | null;
+  accessStatus: string;
+  lastCheckedAt: string | null;
+  isPrimary: boolean;
+  notes: string | null;
+  version: number;
+  storageLocation: {
+    id: string;
+    name: string;
+    kind: string;
+    rootPath: string;
+  } | null;
+  createdByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StorageConfig {
+  folderLayout: string;
+  subfolders: string[];
+  lowSpaceGb: number;
+}
+
+export interface StorageFolderPreview {
+  location: {
+    id: string;
+    name: string;
+    kind: string;
+    rootPath: string;
+    clientRoot: string | null;
+  };
+  relativePath: string;
+  serverPath: string;
+  clientPath: string | null;
+  subfolders: string[];
+}
+
+export interface OpenTicket {
+  token: string;
+  expiresAt: string;
+  path: string;
+  clientPath: string | null;
 }
 
 export interface DuplicateDevice {

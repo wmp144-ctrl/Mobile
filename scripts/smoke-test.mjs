@@ -180,6 +180,64 @@ check(
   'پرونده دیجیتال همه بخش‌ها را برمی‌گرداند',
 );
 
+const locations = await call('/api/storage/locations', { token });
+check(
+  locations.status === 200 &&
+    locations.body.some((item) => item.isDefault && item.health.available),
+  'محل ذخیره‌سازی پیش‌فرض با فضای آزاد و سلامت گزارش شد',
+);
+const defaultLocation = locations.body.find((item) => item.isDefault);
+const primaryFolder = detail.body.files.find((file) => file.isPrimary);
+check(
+  Boolean(primaryFolder) && primaryFolder.relativePath.includes(device.body.intakeCode),
+  'پوشه اختصاصی دستگاه هنگام پذیرش ساخته شد',
+);
+
+const fileEntry = await call(`/api/devices/${deviceId}/files`, {
+  method: 'POST',
+  token,
+  body: {
+    label: 'بکاپ آزمون دود',
+    storageLocationId: defaultLocation.id,
+    relativePath: `${primaryFolder.relativePath}/Backup/smoke`,
+    category: 'backup',
+    backupStatus: 'completed',
+  },
+});
+check(
+  fileEntry.status === 201 &&
+    fileEntry.body.files.some((file) => file.label === 'بکاپ آزمون دود' && file.backupStatus === 'completed'),
+  'مسیر فایل با محل ذخیره‌سازی و وضعیت بکاپ ثبت شد',
+);
+
+const checkedFile = await call(`/api/devices/${deviceId}/files/${primaryFolder.id}/check`, {
+  method: 'POST',
+  token,
+});
+check(
+  checkedFile.status === 201 && checkedFile.body.accessStatus === 'ok',
+  'دسترسی به پوشه دستگاه بررسی و تأیید شد',
+);
+
+const fileSearch = await call(`/api/storage/files?search=${encodeURIComponent(device.body.intakeCode)}`, {
+  token,
+});
+check(fileSearch.status === 200 && fileSearch.body.total >= 2, 'جست‌وجوی فایل با کد پذیرش کار می‌کند');
+
+const openTicket = await call(`/api/devices/${deviceId}/files/${primaryFolder.id}/open-ticket`, {
+  method: 'POST',
+  token,
+});
+const consumedTicket = await call(`/api/storage/open-tickets/${openTicket.body.token}/consume`, {
+  method: 'POST',
+});
+check(
+  openTicket.status === 201 &&
+    consumedTicket.status === 200 &&
+    consumedTicket.body.serverPath === primaryFolder.path,
+  'بلیت یک‌بارمصرف بازکردن پوشه صادر و مصرف شد',
+);
+
 const deviceConfig = await call('/api/device-config', { token });
 check(
   deviceConfig.status === 200 && deviceConfig.body.fields.length >= 19 && deviceConfig.body.options.manufacturer.length > 0,

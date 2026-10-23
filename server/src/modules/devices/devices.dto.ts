@@ -306,15 +306,56 @@ export class CreateDeviceFileDto {
   @MaxLength(120, { message: 'عنوان فایل حداکثر ۱۲۰ نویسه است.' })
   label!: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1, { message: 'مسیر فایل الزامی است.' })
   @MaxLength(500, { message: 'مسیر فایل حداکثر ۵۰۰ نویسه است.' })
-  path!: string;
+  path?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(400, { message: 'مسیر نسبی حداکثر ۴۰۰ نویسه است.' })
+  relativePath?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'مسیر کلاینتی حداکثر ۵۰۰ نویسه است.' })
+  clientPath?: string;
+
+  @IsOptional()
+  @EmptyToUndefined()
+  @IsUUID('4', { message: 'محل ذخیره‌سازی معتبر نیست.' })
+  storageLocationId?: string;
 
   @IsOptional()
   @EmptyToUndefined()
   @IsIn(['network', 'local', 'external'], { message: 'نوع محل ذخیره معتبر نیست.' })
   storageKind?: string;
+
+  @IsOptional()
+  @EmptyToUndefined()
+  @IsIn(['root', 'original', 'backup', 'recovered', 'report', 'image', 'document', 'other'], {
+    message: 'دسته‌بندی فایل معتبر نیست.',
+  })
+  category?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'حجم فایل باید عدد صحیح (بایت) باشد.' })
+  @Min(0)
+  @Max(1_000_000_000_000_000)
+  sizeBytes?: number;
+
+  @IsOptional()
+  @EmptyToUndefined()
+  @IsIn(['none', 'pending', 'in_progress', 'completed', 'failed'], {
+    message: 'وضعیت بکاپ معتبر نیست.',
+  })
+  backupStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'مسیر جایگزین حداکثر ۵۰۰ نویسه است.' })
+  alternativePath?: string;
 
   @IsOptional()
   @EmptyToUndefined()
@@ -327,7 +368,13 @@ export class CreateDeviceFileDto {
   notes?: string;
 }
 
-export class UpdateDeviceFileDto extends CreateDeviceFileDto {}
+export class UpdateDeviceFileDto extends CreateDeviceFileDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'شماره نسخه رکورد معتبر نیست.' })
+  @Min(1)
+  version?: number;
+}
 
 export class CreateDeviceNoteDto {
   @IsString()

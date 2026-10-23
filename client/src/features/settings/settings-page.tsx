@@ -1,16 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { DatabaseBackup, Download, HardDriveDownload, Save, ShieldCheck, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import {
+  DatabaseBackup,
+  Download,
+  HardDrive,
+  HardDriveDownload,
+  Save,
+  ShieldCheck,
+  Store,
+} from 'lucide-react';
 import { api, downloadFile } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import { useApiQuery } from '@/lib/use-api';
 import { usePermissions } from '@/lib/use-permissions';
 import { formatJalaliDateTime } from '@/lib/jalali';
 import { formatBytes } from '@/lib/format';
-import type { AppSettings, BackupFile, BackupStatus } from '@/lib/types';
+import type { AppSettings, BackupFile, BackupStatus, StorageLocation } from '@/lib/types';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, FieldHint, Label } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +55,8 @@ export function SettingsPage() {
   const { can } = usePermissions();
   const canManage = can('settings.manage');
   const canBackup = can('backups.manage');
+  const canViewFiles = can('files.view');
+  const canManageFiles = can('files.manage');
   const toast = useToast();
 
   const settingsQuery = useApiQuery<AppSettings>(() => api.get<AppSettings>('/api/settings'), []);
@@ -282,12 +294,146 @@ export function SettingsPage() {
         </form>
       ) : null}
 
+      {canViewFiles ? (
+        <div className="mt-4">
+          <StorageDefaultSection canManage={canManageFiles} />
+        </div>
+      ) : null}
+
       {canBackup ? <BackupsSection /> : null}
 
       <div className="mt-4">
         <DeviceConfigSection canManage={canManage} />
       </div>
     </div>
+  );
+}
+
+function StorageDefaultSection({ canManage }: { canManage: boolean }) {
+  const toast = useToast();
+  const locationsQuery = useApiQuery<StorageLocation[]>(
+    () => api.get<StorageLocation[]>('/api/storage/locations'),
+    [],
+  );
+  const [selectedId, setSelectedId] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!locationsQuery.data || locationsQuery.data.length === 0) return;
+    const current =
+      locationsQuery.data.find((location) => location.isDefault) ?? locationsQuery.data[0];
+    setSelectedId((previous) =>
+      locationsQuery.data!.some((location) => location.id === previous) ? previous : current.id,
+    );
+  }, [locationsQuery.data]);
+
+  const locations = locationsQuery.data ?? [];
+  const currentDefault = locations.find((location) => location.isDefault) ?? null;
+  const selected = locations.find((location) => location.id === selectedId) ?? null;
+
+  async function saveDefault() {
+    if (!selected || !canManage || saving) return;
+    setSaving(true);
+    try {
+      await api.patch(`/api/storage/locations/${selected.id}`, {
+        isDefault: true,
+        version: selected.version,
+      });
+      toast.success('محل ذخیره‌سازی پیش‌فرض ذخیره شد.');
+      await locationsQuery.reload();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+            <HardDrive className="size-4" />
+          </span>
+          <div>
+            <CardTitle>محل اصلی ذخیره‌سازی</CardTitle>
+            <p className="mt-0.5 text-xs text-ink-400">
+              پوشه دستگاه‌های جدید زیر همین حافظه ساخته می‌شود.
+            </p>
+          </div>
+        </div>
+        <Link to="/storage" className="text-xs font-medium text-brand-700 hover:underline">
+          مدیریت فایل‌ها و حافظه‌ها
+        </Link>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {locationsQuery.loading && !locationsQuery.data ? (
+          <Spinner label="در حال بررسی حافظه‌ها..." />
+        ) : null}
+        {locationsQuery.error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {locationsQuery.error}
+          </div>
+        ) : null}
+        {locationsQuery.data && locations.length === 0 ? (
+          <p className="text-xs text-ink-500">
+            هنوز محل ذخیره‌سازی تعریف نشده است. از صفحه مدیریت فایل‌ها یک حافظه اضافه کنید.
+          </p>
+        ) : null}
+        {locations.length > 0 ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[240px] flex-1">
+              <Label htmlFor="default-storage">حافظه پیش‌فرض</Label>
+              <Select
+                id="default-storage"
+                value={selectedId}
+                onChange={(event) => setSelectedId(event.target.value)}
+                className="mt-1.5"
+                disabled={!canManage}
+              >
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                    {location.isDefault ? ' (پیش‌فرض فعلی)' : ''}
+                  </option>
+                ))}
+              </Select>
+              {selected ? (
+                <FieldHint>
+                  <span dir="ltr" className="break-all">
+                    {selected.rootPath}
+                  </span>
+                  {' — '}
+                  {selected.health.available ? 'متصل' : 'قطع'}
+                  {selected.health.freeBytes !== null
+                    ? ` — فضای آزاد: ${formatBytes(selected.health.freeBytes)}`
+                    : ''}
+                </FieldHint>
+              ) : null}
+            </div>
+            {canManage ? (
+              <Button
+                type="button"
+                onClick={() => void saveDefault()}
+                loading={saving}
+                disabled={!selected || selected.id === currentDefault?.id}
+              >
+                <Save className="size-4" />
+                ذخیره محل پیش‌فرض
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+        {currentDefault ? (
+          <p className="text-[11px] leading-6 text-ink-400">
+            مسیر کلاینتی محل پیش‌فرض:{' '}
+            <span dir="ltr">
+              {currentDefault.clientRoot ?? 'تعریف نشده (مسیر شبکه‌ای در محل ثبت نشده است)'}
+            </span>
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 

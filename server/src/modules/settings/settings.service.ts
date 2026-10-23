@@ -27,11 +27,18 @@ export interface DeviceSettings {
   defaultDueDays: number;
 }
 
+export interface StorageSettings {
+  folderLayout: string;
+  subfolders: string[];
+  lowSpaceGb: number;
+}
+
 export interface FullSettings {
   workshop: WorkshopSettings;
   security: SecuritySettings;
   backup: BackupSettings;
   devices: DeviceSettings;
+  storage: StorageSettings;
 }
 
 const DEFAULT_WORKSHOP: WorkshopSettings = { name: '', address: '', phone: '' };
@@ -43,6 +50,12 @@ const DEFAULT_SECURITY: SecuritySettings = {
 };
 const DEFAULT_BACKUP: BackupSettings = { retentionCount: 14 };
 const DEFAULT_DEVICES: DeviceSettings = { intakePrefix: 'MR', defaultDueDays: 3 };
+const DEFAULT_SUBFOLDERS = ['Original', 'Backup', 'Recovered', 'Reports', 'Images', 'Documents'];
+const DEFAULT_STORAGE: StorageSettings = {
+  folderLayout: '{year}/{intakeCode}',
+  subfolders: DEFAULT_SUBFOLDERS,
+  lowSpaceGb: 5,
+};
 
 @Injectable()
 export class SettingsService {
@@ -84,6 +97,15 @@ export class SettingsService {
         intakePrefix: str('devices.intakePrefix', DEFAULT_DEVICES.intakePrefix) || DEFAULT_DEVICES.intakePrefix,
         defaultDueDays: num('devices.defaultDueDays', DEFAULT_DEVICES.defaultDueDays),
       },
+      storage: {
+        folderLayout: str('storage.folderLayout', DEFAULT_STORAGE.folderLayout) || DEFAULT_STORAGE.folderLayout,
+        subfolders: Array.isArray(map.get('storage.subfolders'))
+          ? (map.get('storage.subfolders') as unknown[]).filter(
+              (item): item is string => typeof item === 'string' && item.trim().length > 0,
+            )
+          : DEFAULT_STORAGE.subfolders,
+        lowSpaceGb: num('storage.lowSpaceGb', DEFAULT_STORAGE.lowSpaceGb),
+      },
     };
   }
 
@@ -106,6 +128,13 @@ export class SettingsService {
       entries.push(['devices.intakePrefix', dto.intakePrefix.trim().toUpperCase()]);
     }
     if (dto.defaultDueDays !== undefined) entries.push(['devices.defaultDueDays', dto.defaultDueDays]);
+    if (dto.storageFolderLayout !== undefined) {
+      entries.push(['storage.folderLayout', dto.storageFolderLayout.trim()]);
+    }
+    if (dto.storageSubfolders !== undefined) {
+      entries.push(['storage.subfolders', dto.storageSubfolders.map((item) => item.trim())]);
+    }
+    if (dto.storageLowSpaceGb !== undefined) entries.push(['storage.lowSpaceGb', dto.storageLowSpaceGb]);
 
     if (entries.length > 0) {
       await this.db.withTransaction(async (client) => {
