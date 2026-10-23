@@ -120,8 +120,8 @@ export class DeviceConfigService {
     const row = await this.db.queryOne<FieldDefinitionRow>(
       `INSERT INTO field_definitions
          (entity, field_key, label_fa, field_type, group_name, placeholder, is_system,
-          is_enabled, is_required, is_locked, options, sort_order)
-       VALUES ('device', $1, $2, $3, $4, $5, false, true, $6, false, $7::jsonb, $8)
+          is_enabled, is_required, is_locked, options, sort_order, is_searchable, is_reportable)
+       VALUES ('device', $1, $2, $3, $4, $5, false, true, $6, false, $7::jsonb, $8, $9, $10)
        RETURNING ${FIELD_OPTION_SELECT.replace(/f\./g, '')}`,
       [
         `custom_${crypto.randomBytes(5).toString('hex')}`,
@@ -132,6 +132,8 @@ export class DeviceConfigService {
         dto.isRequired ?? false,
         JSON.stringify(normalizeFieldOptions(dto.options)),
         dto.sortOrder ?? (nextOrder?.next ?? 10),
+        dto.isSearchable ?? true,
+        dto.isReportable ?? true,
       ],
     );
     if (!row) throw new Error('ایجاد فیلد ناموفق بود.');
@@ -182,6 +184,8 @@ export class DeviceConfigService {
     if (dto.placeholder !== undefined) set('placeholder', dto.placeholder.trim() || null);
     if (dto.isEnabled !== undefined) set('is_enabled', dto.isEnabled);
     if (dto.isRequired !== undefined) set('is_required', dto.isRequired);
+    if (dto.isSearchable !== undefined) set('is_searchable', dto.isSearchable);
+    if (dto.isReportable !== undefined) set('is_reportable', dto.isReportable);
     if (dto.sortOrder !== undefined) set('sort_order', dto.sortOrder);
     if (dto.options !== undefined && !existing.is_system) {
       set('options', JSON.stringify(normalizeFieldOptions(dto.options)), '::jsonb');
@@ -372,6 +376,14 @@ export class DeviceConfigService {
           result[field.field_key] = value;
           break;
         }
+        case 'amount': {
+          const value = typeof raw === 'number' ? raw : Number(String(raw).replace(/[,٬\s]/g, ''));
+          if (!Number.isFinite(value) || value < 0) {
+            throw invalidField(field.label_fa, 'باید مبلغی نامنفی باشد');
+          }
+          result[field.field_key] = Math.round(value * 100) / 100;
+          break;
+        }
         case 'checkbox': {
           const value = raw === true || raw === 'true' || raw === 1;
           result[field.field_key] = value;
@@ -381,6 +393,22 @@ export class DeviceConfigService {
           const value = String(raw).trim();
           if (Number.isNaN(new Date(value).getTime())) {
             throw invalidField(field.label_fa, 'باید تاریخ معتبر باشد');
+          }
+          result[field.field_key] = value;
+          break;
+        }
+        case 'datetime': {
+          const value = String(raw).trim();
+          if (Number.isNaN(new Date(value).getTime())) {
+            throw invalidField(field.label_fa, 'باید تاریخ و ساعت معتبر باشد');
+          }
+          result[field.field_key] = value;
+          break;
+        }
+        case 'file': {
+          const value = String(raw).trim();
+          if (value.length > 500) {
+            throw invalidField(field.label_fa, 'مسیر یا نام فایل حداکثر ۵۰۰ نویسه است');
           }
           result[field.field_key] = value;
           break;

@@ -58,12 +58,15 @@ export const STORAGE_KIND_OPTIONS = [
 
 export const FIELD_TYPE_OPTIONS = [
   { key: 'text', label: 'متن کوتاه' },
-  { key: 'textarea', label: 'متن بلند' },
+  { key: 'textarea', label: 'متن چندخطی' },
   { key: 'number', label: 'عدد' },
+  { key: 'amount', label: 'مبلغ' },
   { key: 'date', label: 'تاریخ' },
+  { key: 'datetime', label: 'تاریخ و ساعت' },
   { key: 'select', label: 'انتخاب تک‌گزینه‌ای' },
   { key: 'multi_select', label: 'انتخاب چندگزینه‌ای' },
-  { key: 'checkbox', label: 'تیک' },
+  { key: 'checkbox', label: 'چک‌باکس' },
+  { key: 'file', label: 'فایل' },
 ] as const;
 
 export const OPTION_CATEGORY_LABELS: Record<string, string> = {

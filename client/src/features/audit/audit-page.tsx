@@ -278,7 +278,7 @@ export function AuditPage() {
               <p className="mb-2 text-xs text-ink-400">جزئیات فنی</p>
               <pre
                 dir="ltr"
-                className="max-h-52 overflow-auto rounded-xl bg-ink-900 p-3 text-[11px] leading-5 text-ink-100"
+                className="max-h-52 overflow-auto rounded-xl bg-navy-900 p-3 text-[11px] leading-5 text-ink-100"
               >
                 {JSON.stringify(selected.metadata, null, 2)}
               </pre>

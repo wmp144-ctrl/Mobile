@@ -47,7 +47,7 @@ export function DevicePrintPage() {
   if (!detail) return <Spinner label="در حال آماده‌سازی نسخه چاپی..." />;
 
   return (
-    <div dir="rtl" className="mx-auto max-w-[820px] bg-white p-6 text-ink-900 print:max-w-none print:p-0">
+    <div dir="rtl" className="mx-auto max-w-[820px] bg-surface p-6 text-ink-900 print:max-w-none print:p-0">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link to={`/devices/${detail.id}`}>
           <Button variant="outline">

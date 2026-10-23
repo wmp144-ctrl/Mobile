@@ -25,6 +25,8 @@ export interface AppConfig {
   cookieSecure: boolean;
   backupDir: string;
   pgDumpPath: string;
+  pgRestorePath: string;
+  backupPassphrase: string;
   backupCronEnabled: boolean;
   uploadsDir: string;
   storageRoot: string;
@@ -67,6 +69,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     cookieSecure: readBool(env.COOKIE_SECURE, isProduction),
     backupDir: path.resolve(process.cwd(), env.BACKUP_DIR ?? './backups'),
     pgDumpPath: env.PG_DUMP_PATH ?? 'pg_dump',
+    pgRestorePath: env.PG_RESTORE_PATH ?? 'pg_restore',
+    // عبارت عبور رمزنگاری نسخه‌های پشتیبان؛ در نبود آن پشتیبان‌گیری رمزنگاری‌شده ممکن نیست
+    backupPassphrase: env.BACKUP_PASSPHRASE ?? '',
     backupCronEnabled: readBool(env.BACKUP_CRON_ENABLED, true),
     uploadsDir: path.resolve(process.cwd(), env.UPLOADS_DIR ?? './uploads'),
     // ریشه پیش‌فرض ذخیره‌سازی فایل دستگاه‌ها؛ در تنظیمات می‌توان محل دیگری تعریف کرد

@@ -33,7 +33,7 @@ export function Switch({ checked, onCheckedChange, disabled, id, label, descript
       >
         <span
           className={cn(
-            'absolute h-5 w-5 rounded-full bg-white shadow transition-all',
+            'absolute h-5 w-5 rounded-full bg-surface shadow transition-all',
             checked ? 'start-0.5' : 'start-[22px]',
           )}
         />

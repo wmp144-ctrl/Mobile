@@ -772,25 +772,25 @@ export function DeviceDetailPage() {
           <CardContent className="p-0 pt-4">
             {device.storageSummary ? (
               <div className="mx-5 mb-4 grid gap-2 rounded-xl bg-ink-50/70 p-3 sm:grid-cols-4">
-                <div className="rounded-lg bg-white px-3 py-2">
+                <div className="rounded-lg bg-surface px-3 py-2">
                   <p className="text-[11px] text-ink-400">تعداد مسیرها</p>
                   <p className="text-sm font-semibold text-ink-800">
                     {formatNumber(device.storageSummary.filesTotal)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-white px-3 py-2">
+                <div className="rounded-lg bg-surface px-3 py-2">
                   <p className="text-[11px] text-ink-400">حجم ثبت‌شده</p>
                   <p className="text-sm font-semibold text-ink-800">
                     {formatBytes(device.storageSummary.totalBytes)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-white px-3 py-2">
+                <div className="rounded-lg bg-surface px-3 py-2">
                   <p className="text-[11px] text-ink-400">مسیرهای دارای هشدار</p>
                   <p className="text-sm font-semibold text-ink-800">
                     {formatNumber(device.storageSummary.unavailableCount)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-white px-3 py-2">
+                <div className="rounded-lg bg-surface px-3 py-2">
                   <p className="text-[11px] text-ink-400">آخرین بررسی</p>
                   <p className="text-sm font-semibold text-ink-800">
                     {device.storageSummary.lastCheckedAt
@@ -1093,7 +1093,7 @@ export function DeviceDetailPage() {
             ) : (
               <ul className="space-y-3">
                 {device.technicianNotes.map((note) => (
-                  <li key={note.id} className="rounded-xl border border-ink-200 bg-white p-4">
+                  <li key={note.id} className="rounded-xl border border-ink-200 bg-surface p-4">
                     <div className="flex items-start justify-between gap-3">
                       <p className="whitespace-pre-wrap text-sm leading-6 text-ink-700">{note.body}</p>
                       {canManage ? (

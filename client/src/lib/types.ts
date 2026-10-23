@@ -13,11 +13,22 @@ export interface PublicUser {
   version: number;
 }
 
+export interface AppearanceSettings {
+  language: 'fa' | 'en';
+  calendar: 'jalali' | 'gregorian';
+  timezone: string;
+  timeFormat: '24' | '12';
+  theme: 'light' | 'dark' | 'system';
+  accentColor: 'blue' | 'navy' | 'teal' | 'violet' | 'emerald';
+}
+
 export interface PublicInfo {
   needsSetup: boolean;
   appName: string;
   version: string;
   workshopName: string;
+  workshopLogo: string;
+  appearance: AppearanceSettings;
   serverTime: string;
 }
 
@@ -105,26 +116,82 @@ export interface StorageSettings {
   lowSpaceGb: number;
 }
 
+export interface BackupSettings {
+  retentionCount: number;
+  directory: string;
+  scheduleEnabled: boolean;
+  scheduleTime: string;
+  encrypt: boolean;
+  includeSettings: boolean;
+  includeFiles: boolean;
+}
+
 export interface AppSettings {
   workshop: WorkshopSettings;
   security: SecuritySettings;
-  backup: { retentionCount: number };
+  appearance: AppearanceSettings;
+  backup: BackupSettings;
   devices: DeviceSettings;
   storage: StorageSettings;
 }
 
 export interface BackupFile {
   name: string;
+  createdAt: string;
   sizeBytes: number;
+  encrypted: boolean;
+  includesSettings: boolean;
+  includesFiles: boolean;
+  databaseBytes: number;
+  filesCount: number;
+  filesBytes: number;
+  legacy: boolean;
+}
+
+export interface BackupRun {
+  id: string;
+  bundleName: string;
+  operation: 'backup' | 'restore';
+  trigger: 'manual' | 'scheduled' | 'pre_restore';
+  status: 'success' | 'failed';
+  encrypted: boolean;
+  includesFiles: boolean;
+  durationMs: number | null;
+  error: string | null;
+  createdBy: string | null;
   createdAt: string;
 }
 
 export interface BackupStatus {
   pgDumpAvailable: boolean;
   pgDumpVersion: string | null;
+  pgRestoreAvailable: boolean;
+  pgRestoreVersion: string | null;
   directory: string;
   retentionCount: number;
   scheduledEnabled: boolean;
+  scheduleTime: string;
+  encryptionAvailable: boolean;
+  lastSuccessAt: string | null;
+  lastSuccessName: string | null;
+  lastFailureAt: string | null;
+  lastFailureMessage: string | null;
+}
+
+export interface BackupList {
+  items: BackupFile[];
+  status: BackupStatus;
+  runs: BackupRun[];
+}
+
+export interface RestoreResult {
+  bundleName: string;
+  restoredAt: string;
+  database: boolean;
+  settingsRestored: boolean;
+  filesRestored: number;
+  filesSkipped: number;
+  safetyBackup: string | null;
 }
 
 export interface DashboardOverview {
@@ -414,13 +481,26 @@ export interface FieldDefinition {
   id: string;
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'multi_select' | 'checkbox' | 'password';
+  type:
+    | 'text'
+    | 'textarea'
+    | 'number'
+    | 'amount'
+    | 'date'
+    | 'datetime'
+    | 'select'
+    | 'multi_select'
+    | 'checkbox'
+    | 'file'
+    | 'password';
   group: string;
   placeholder: string | null;
   isSystem: boolean;
   isEnabled: boolean;
   isRequired: boolean;
   isLocked: boolean;
+  isSearchable: boolean;
+  isReportable: boolean;
   options: FieldOptionValue[];
   sortOrder: number;
 }
@@ -484,7 +564,7 @@ export type ReportChartType =
   | 'stackedBar'
   | 'combo';
 
-export type ReportTableColumn =
+export type ReportTableColumnKey =
   | 'intakeCode'
   | 'ownerName'
   | 'ownerPhone'
@@ -499,6 +579,8 @@ export type ReportTableColumn =
   | 'deliveredAt'
   | 'operationCount'
   | 'reportedProblem';
+
+export type ReportTableColumn = ReportTableColumnKey | `custom:${string}`;
 
 export interface AnalyticsFilter {
   from?: string;
@@ -609,6 +691,7 @@ export interface AnalyticsOptions {
   years: { value: number; label: string }[];
   currentYear: number;
   currentMonth: number;
+  customColumns?: { key: string; label: string }[];
   workshop: { name: string; phone: string; address: string; logo: string };
 }
 

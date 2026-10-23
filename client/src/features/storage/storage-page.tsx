@@ -73,7 +73,7 @@ export function StoragePage() {
         description="مسیر بکاپ‌ها، فایل‌های ریکاوری و سلامت حافظه‌های سرور و شبکه را مدیریت کنید."
       />
 
-      <div className="flex flex-wrap gap-1.5 rounded-xl border border-ink-200 bg-white p-1.5 shadow-sm">
+      <div className="flex flex-wrap gap-1.5 rounded-xl border border-ink-200 bg-surface p-1.5 shadow-sm">
         {tabs.map((item) => (
           <button
             key={item.key}
@@ -465,7 +465,7 @@ function LocationsTab({ canManage }: { canManage: boolean }) {
                 className={cn(
                   'rounded-2xl border p-4',
                   location.health.available
-                    ? 'border-ink-200 bg-white'
+                    ? 'border-ink-200 bg-surface'
                     : 'border-rose-200 bg-rose-50/40',
                 )}
               >

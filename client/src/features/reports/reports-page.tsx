@@ -114,6 +114,14 @@ export function ReportsPage() {
     () => api.get<AnalyticsOptions>('/api/reports/options'),
     [],
   );
+  const columnOptions: { value: ReportTableColumn; label: string }[] = [
+    ...TABLE_COLUMN_OPTIONS,
+    ...(optionsQuery.data?.customColumns ?? []).map((column) => ({
+      value: column.key as ReportTableColumn,
+      label: `${column.label} (سفارشی)`,
+    })),
+  ];
+
   const savedQuery = useApiQuery<SavedReport[]>(
     () => api.get<SavedReport[]>('/api/reports/saved'),
     [],
@@ -655,10 +663,10 @@ export function ReportsPage() {
               </Badge>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2 pt-4 sm:grid-cols-3 xl:grid-cols-4">
-              {TABLE_COLUMN_OPTIONS.map((option) => (
+              {columnOptions.map((option) => (
                 <label
                   key={option.value}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 py-2 text-xs text-ink-600 transition hover:border-brand-300"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink-200 bg-surface px-2.5 py-2 text-xs text-ink-600 transition hover:border-brand-300"
                 >
                   <input
                     type="checkbox"
@@ -672,7 +680,7 @@ export function ReportsPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-ink-200 bg-surface p-3 shadow-sm">
             <Button onClick={() => void runReport()} loading={running}>
               <Play className="size-4" />
               اجرای گزارش

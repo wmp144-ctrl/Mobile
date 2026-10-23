@@ -25,7 +25,7 @@ import {
   REPORT_CHART_TYPES,
   REPORT_DIMENSIONS,
   REPORT_METRICS,
-  REPORT_TABLE_COLUMNS,
+  REPORT_TABLE_COLUMN_PATTERN,
   UNKNOWN_FILTER_VALUE,
   type AnalyticsFilter,
   type AnalyticsOptions,
@@ -162,6 +162,7 @@ export class AnalyticsService {
       jobs,
       technicians,
       years,
+      customColumns,
       workshop,
     ] = await Promise.all([
       this.repo.equipmentTypeOptions(),
@@ -171,6 +172,7 @@ export class AnalyticsService {
       this.repo.jobOptions(),
       this.repo.technicianOptions(),
       this.repo.yearOptions(),
+      this.repo.reportableCustomColumns(),
       this.settings.getAll(),
     ]);
     const now = jalaliParts(new Date());
@@ -192,6 +194,7 @@ export class AnalyticsService {
       years: allYears.map((year) => ({ value: year, label: toPersianDigits(year) })),
       currentYear,
       currentMonth,
+      customColumns,
       workshop: workshop.workshop,
     };
   }
@@ -728,7 +731,7 @@ export class AnalyticsService {
         metric: chart.metric,
         chartType: chart.chartType,
       })),
-      tableColumns: dto.tableColumns,
+      tableColumns: dto.tableColumns?.filter((column) => REPORT_TABLE_COLUMN_PATTERN.test(column)),
       tableLimit: dto.tableLimit,
     };
     this.assertFilter(config);
@@ -765,9 +768,9 @@ export class AnalyticsService {
       };
     });
     const tableColumns = Array.isArray(source.tableColumns)
-      ? source.tableColumns.filter((column): column is ReportTableColumn =>
-          REPORT_TABLE_COLUMNS.includes(String(column) as ReportTableColumn),
-        )
+      ? source.tableColumns
+          .map((column) => String(column))
+          .filter((column): column is ReportTableColumn => REPORT_TABLE_COLUMN_PATTERN.test(column))
       : undefined;
     const config: ReportConfig = {
       from: typeof source.from === 'string' ? source.from : undefined,

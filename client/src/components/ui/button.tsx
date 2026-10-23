@@ -10,7 +10,7 @@ export const buttonVariants = cva(
       variant: {
         primary: 'bg-brand-600 text-white shadow-sm shadow-brand-900/10 hover:bg-brand-700',
         secondary: 'bg-ink-100 text-ink-800 hover:bg-ink-200',
-        outline: 'border border-ink-200 bg-white text-ink-700 hover:bg-ink-50',
+        outline: 'border border-ink-200 bg-surface text-ink-700 hover:bg-ink-50',
         ghost: 'text-ink-600 hover:bg-ink-100 hover:text-ink-900',
         danger: 'bg-rose-600 text-white hover:bg-rose-700',
       },

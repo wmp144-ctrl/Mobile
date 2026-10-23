@@ -19,8 +19,25 @@ export interface SecuritySettings {
   sessionDays: number;
 }
 
+export interface AppearanceSettings {
+  language: 'fa' | 'en';
+  calendar: 'jalali' | 'gregorian';
+  timezone: string;
+  timeFormat: '24' | '12';
+  theme: 'light' | 'dark' | 'system';
+  accentColor: 'blue' | 'navy' | 'teal' | 'violet' | 'emerald';
+}
+
 export interface BackupSettings {
   retentionCount: number;
+  /** مسیر سفارشی نسخه‌های پشتیبان؛ خالی یعنی مسیر تنظیمات سرور (BACKUP_DIR) */
+  directory: string;
+  scheduleEnabled: boolean;
+  /** ساعت اجرای پشتیبان‌گیری خودکار به وقت سرور، قالب HH:MM */
+  scheduleTime: string;
+  encrypt: boolean;
+  includeSettings: boolean;
+  includeFiles: boolean;
 }
 
 export interface DeviceSettings {
@@ -37,6 +54,7 @@ export interface StorageSettings {
 export interface FullSettings {
   workshop: WorkshopSettings;
   security: SecuritySettings;
+  appearance: AppearanceSettings;
   backup: BackupSettings;
   devices: DeviceSettings;
   storage: StorageSettings;
@@ -49,7 +67,23 @@ const DEFAULT_SECURITY: SecuritySettings = {
   lockoutMinutes: 15,
   sessionDays: 7,
 };
-const DEFAULT_BACKUP: BackupSettings = { retentionCount: 14 };
+const DEFAULT_APPEARANCE: AppearanceSettings = {
+  language: 'fa',
+  calendar: 'jalali',
+  timezone: 'Asia/Tehran',
+  timeFormat: '24',
+  theme: 'light',
+  accentColor: 'blue',
+};
+const DEFAULT_BACKUP: BackupSettings = {
+  retentionCount: 14,
+  directory: '',
+  scheduleEnabled: false,
+  scheduleTime: '03:00',
+  encrypt: true,
+  includeSettings: true,
+  includeFiles: false,
+};
 const DEFAULT_DEVICES: DeviceSettings = { intakePrefix: 'MR', defaultDueDays: 3 };
 const DEFAULT_SUBFOLDERS = ['Original', 'Backup', 'Recovered', 'Reports', 'Images', 'Documents'];
 const DEFAULT_STORAGE: StorageSettings = {
@@ -57,6 +91,16 @@ const DEFAULT_STORAGE: StorageSettings = {
   subfolders: DEFAULT_SUBFOLDERS,
   lowSpaceGb: 5,
 };
+
+export const TIMEZONE_OPTIONS = [
+  'Asia/Tehran',
+  'Asia/Dubai',
+  'Asia/Istanbul',
+  'Europe/Berlin',
+  'Europe/London',
+  'America/New_York',
+  'UTC',
+] as const;
 
 @Injectable()
 export class SettingsService {
@@ -78,6 +122,16 @@ export class SettingsService {
       const value = map.get(key);
       return typeof value === 'string' ? value : fallback;
     };
+    const bool = (key: string, fallback: boolean): boolean => {
+      const value = map.get(key);
+      return typeof value === 'boolean' ? value : fallback;
+    };
+    const oneOf = <T extends string>(key: string, allowed: readonly T[], fallback: T): T => {
+      const value = map.get(key);
+      return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+        ? (value as T)
+        : fallback;
+    };
 
     return {
       workshop: {
@@ -92,8 +146,26 @@ export class SettingsService {
         lockoutMinutes: num('security.lockoutMinutes', DEFAULT_SECURITY.lockoutMinutes),
         sessionDays: num('security.sessionDays', DEFAULT_SECURITY.sessionDays),
       },
+      appearance: {
+        language: oneOf('app.language', ['fa', 'en'] as const, DEFAULT_APPEARANCE.language),
+        calendar: oneOf('app.calendar', ['jalali', 'gregorian'] as const, DEFAULT_APPEARANCE.calendar),
+        timezone: oneOf('app.timezone', TIMEZONE_OPTIONS, DEFAULT_APPEARANCE.timezone),
+        timeFormat: oneOf('app.timeFormat', ['24', '12'] as const, DEFAULT_APPEARANCE.timeFormat),
+        theme: oneOf('app.theme', ['light', 'dark', 'system'] as const, DEFAULT_APPEARANCE.theme),
+        accentColor: oneOf(
+          'app.accentColor',
+          ['blue', 'navy', 'teal', 'violet', 'emerald'] as const,
+          DEFAULT_APPEARANCE.accentColor,
+        ),
+      },
       backup: {
         retentionCount: num('backup.retentionCount', DEFAULT_BACKUP.retentionCount),
+        directory: str('backup.directory', DEFAULT_BACKUP.directory),
+        scheduleEnabled: bool('backup.scheduleEnabled', DEFAULT_BACKUP.scheduleEnabled),
+        scheduleTime: str('backup.scheduleTime', DEFAULT_BACKUP.scheduleTime),
+        encrypt: bool('backup.encrypt', DEFAULT_BACKUP.encrypt),
+        includeSettings: bool('backup.includeSettings', DEFAULT_BACKUP.includeSettings),
+        includeFiles: bool('backup.includeFiles', DEFAULT_BACKUP.includeFiles),
       },
       devices: {
         intakePrefix: str('devices.intakePrefix', DEFAULT_DEVICES.intakePrefix) || DEFAULT_DEVICES.intakePrefix,
@@ -127,6 +199,24 @@ export class SettingsService {
     if (dto.lockoutMinutes !== undefined) entries.push(['security.lockoutMinutes', dto.lockoutMinutes]);
     if (dto.sessionDays !== undefined) entries.push(['security.sessionDays', dto.sessionDays]);
     if (dto.backupRetentionCount !== undefined) entries.push(['backup.retentionCount', dto.backupRetentionCount]);
+    if (dto.backupDirectory !== undefined) entries.push(['backup.directory', dto.backupDirectory.trim()]);
+    if (dto.backupScheduleEnabled !== undefined) {
+      entries.push(['backup.scheduleEnabled', dto.backupScheduleEnabled]);
+    }
+    if (dto.backupScheduleTime !== undefined) {
+      entries.push(['backup.scheduleTime', dto.backupScheduleTime.trim()]);
+    }
+    if (dto.backupEncrypt !== undefined) entries.push(['backup.encrypt', dto.backupEncrypt]);
+    if (dto.backupIncludeSettings !== undefined) {
+      entries.push(['backup.includeSettings', dto.backupIncludeSettings]);
+    }
+    if (dto.backupIncludeFiles !== undefined) entries.push(['backup.includeFiles', dto.backupIncludeFiles]);
+    if (dto.language !== undefined) entries.push(['app.language', dto.language]);
+    if (dto.calendar !== undefined) entries.push(['app.calendar', dto.calendar]);
+    if (dto.timezone !== undefined) entries.push(['app.timezone', dto.timezone]);
+    if (dto.timeFormat !== undefined) entries.push(['app.timeFormat', dto.timeFormat]);
+    if (dto.theme !== undefined) entries.push(['app.theme', dto.theme]);
+    if (dto.accentColor !== undefined) entries.push(['app.accentColor', dto.accentColor]);
     if (dto.intakePrefix !== undefined) {
       entries.push(['devices.intakePrefix', dto.intakePrefix.trim().toUpperCase()]);
     }

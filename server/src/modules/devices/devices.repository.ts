@@ -169,7 +169,11 @@ export class DevicesRepository {
            WHERE o.device_id = d.id AND o.deleted_at IS NULL AND ol.label_fa ILIKE ${like}
         )
         OR EXISTS (
-          SELECT 1 FROM jsonb_each_text(d.custom_fields) cf WHERE cf.value ILIKE ${like}
+          SELECT 1
+            FROM jsonb_each_text(d.custom_fields) cf
+            JOIN field_definitions fd
+              ON fd.entity = 'device' AND fd.field_key = cf.key AND fd.is_searchable
+           WHERE cf.value ILIKE ${like}
         )
       )`);
     }

@@ -1,7 +1,19 @@
-const faNumber = new Intl.NumberFormat('fa-IR');
+import { getFormattingPreferences } from './jalali';
+
+let numberFormatter: { key: string; value: Intl.NumberFormat } | null = null;
+
+function numberFormat(): Intl.NumberFormat {
+  const language = getFormattingPreferences().language;
+  if (numberFormatter?.key === language) return numberFormatter.value;
+  numberFormatter = {
+    key: language,
+    value: new Intl.NumberFormat(language === 'fa' ? 'fa-IR' : 'en-US'),
+  };
+  return numberFormatter.value;
+}
 
 export function formatNumber(value: number): string {
-  return faNumber.format(value);
+  return numberFormat().format(value);
 }
 
 export function formatBytes(bytes: number): string {
@@ -14,7 +26,7 @@ export function formatBytes(bytes: number): string {
     unit += 1;
   }
   const rounded = size >= 10 || unit === 0 ? Math.round(size) : Math.round(size * 10) / 10;
-  return `${faNumber.format(rounded)} ${units[unit]}`;
+  return `${numberFormat().format(rounded)} ${units[unit]}`;
 }
 
 export function initials(name: string): string {

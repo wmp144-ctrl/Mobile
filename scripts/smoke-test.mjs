@@ -48,6 +48,10 @@ console.log(`آزمون دود روی ${BASE}`);
 const info = await call('/api/public/info');
 check(info.status === 200, 'اطلاعات عمومی سامانه در دسترس است');
 check(info.body.needsSetup === true, 'سامانه در وضعیت راه‌اندازی اولیه است');
+check(
+  info.body.appearance?.theme === 'light' && info.body.appearance?.accentColor === 'blue',
+  'تنظیمات ظاهر پیش‌فرض در اطلاعات عمومی موجود است',
+);
 
 const setup = await call('/api/auth/setup', { method: 'POST', body: ADMIN });
 check(setup.status === 201, 'راه‌اندازی اولیه انجام شد', `وضعیت ${setup.status}`);
@@ -319,11 +323,73 @@ check(
   'خروجی CSV گزارش با کد پذیرش تولید شد',
 );
 
+const appearanceUpdate = await call('/api/settings', {
+  method: 'PATCH',
+  token,
+  body: {
+    language: 'fa',
+    calendar: 'jalali',
+    timezone: 'Asia/Tehran',
+    timeFormat: '24',
+    theme: 'dark',
+    accentColor: 'teal',
+    backupScheduleTime: '03:15',
+  },
+});
+check(
+  appearanceUpdate.status === 200 &&
+    appearanceUpdate.body.appearance.theme === 'dark' &&
+    appearanceUpdate.body.appearance.accentColor === 'teal' &&
+    appearanceUpdate.body.backup.scheduleTime === '03:15',
+  'تنظیمات ظاهر، تقویم و پشتیبان‌گیری ذخیره شد',
+);
+
+const publicAfterUpdate = await call('/api/public/info');
+check(
+  publicAfterUpdate.body.appearance.theme === 'dark' &&
+    publicAfterUpdate.body.appearance.accentColor === 'teal',
+  'تنظیمات ظاهر بدون ورود نیز اعمال می‌شود',
+);
+
+const customField = await call('/api/device-config/fields', {
+  method: 'POST',
+  token,
+  body: {
+    labelFa: 'هزینه برآوردی آزمون',
+    fieldType: 'amount',
+    groupName: 'اطلاعات تکمیلی',
+    isSearchable: false,
+    isReportable: true,
+  },
+});
+check(
+  customField.status === 201 &&
+    customField.body.type === 'amount' &&
+    customField.body.isSearchable === false &&
+    customField.body.isReportable === true,
+  'فیلد سفارشی مبلغ با پرچم جست‌وجو و گزارش ساخته شد',
+);
+
+const phase5ReportOptions = await call('/api/reports/options', { token });
+check(
+  phase5ReportOptions.status === 200 &&
+    (phase5ReportOptions.body.customColumns ?? []).some(
+      (column) => column.key === `custom:${customField.body.key}`,
+    ),
+  'فیلد سفارشی قابل گزارش در انتخاب ستون‌های گزارش موجود است',
+);
+
 const audit = await call('/api/audit-logs?action=auth.login', { token });
 check(audit.status === 200 && audit.body.total >= 1, 'تاریخچه ورود قابل مشاهده است');
 
 const backups = await call('/api/backups', { token });
-check(backups.status === 200 && Array.isArray(backups.body.items), 'وضعیت پشتیبان‌گیری در دسترس است');
+check(
+  backups.status === 200 &&
+    Array.isArray(backups.body.items) &&
+    Array.isArray(backups.body.runs) &&
+    typeof backups.body.status.encryptionAvailable === 'boolean',
+  'وضعیت، تاریخچه و رمزنگاری پشتیبان‌گیری در دسترس است',
+);
 
 const refreshed = await call('/api/auth/refresh', {
   method: 'POST',

@@ -1,7 +1,14 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import EmbeddedPostgres from 'embedded-postgres';
-import { TEST_DATA_DIR, TEST_DB_NAME, TEST_PG_PORT, TEST_PG_DUMP, TEST_TOOLS_DIR } from './constants';
+import {
+  TEST_DATA_DIR,
+  TEST_DB_NAME,
+  TEST_PG_PORT,
+  TEST_PG_DUMP,
+  TEST_PG_RESTORE,
+  TEST_TOOLS_DIR,
+} from './constants';
 
 const FAKE_PG_DUMP = `#!/bin/sh
 if [ "$1" = "--version" ]; then
@@ -23,9 +30,20 @@ echo "fake backup content" > "$file"
 exit 0
 `;
 
+// ابزار بازیابی نیز در محیط تست شبیه‌سازی می‌شود؛ اجرای واقعی pg_restore روی سرور انجام می‌شود.
+const FAKE_PG_RESTORE = `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  echo "pg_restore (PostgreSQL) 18.0"
+  exit 0
+fi
+echo "$@" > "$(dirname "$0")/pg_restore.args"
+exit 0
+`;
+
 export default async function globalSetup(): Promise<void> {
   fs.mkdirSync(TEST_TOOLS_DIR, { recursive: true });
   fs.writeFileSync(TEST_PG_DUMP, FAKE_PG_DUMP, { mode: 0o755 });
+  fs.writeFileSync(TEST_PG_RESTORE, FAKE_PG_RESTORE, { mode: 0o755 });
 
   const postgres = new EmbeddedPostgres({
     databaseDir: TEST_DATA_DIR,

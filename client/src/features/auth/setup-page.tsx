@@ -85,7 +85,7 @@ export function SetupPage() {
   if (alreadySetUp) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-ink-50 px-4">
-        <div className="w-full max-w-md rounded-2xl border border-ink-200 bg-white p-8 text-center shadow-sm">
+        <div className="w-full max-w-md rounded-2xl border border-ink-200 bg-surface p-8 text-center shadow-sm">
           <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
             <CheckCircle2 className="size-6" />
           </div>
@@ -102,7 +102,7 @@ export function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-ink-900 via-ink-900 to-brand-900 px-4 py-10">
+    <div className="min-h-screen bg-gradient-to-b from-navy-900 via-navy-900 to-brand-900 px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center gap-3 text-white">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
@@ -114,7 +114,7 @@ export function SetupPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-2xl shadow-ink-900/30 sm:p-8 animate-fade-up">
+        <div className="rounded-2xl bg-surface p-6 shadow-2xl shadow-ink-900/30 sm:p-8 animate-fade-up">
           <div className="flex items-start gap-3 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3">
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-brand-600" />
             <div>

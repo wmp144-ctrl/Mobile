@@ -28,6 +28,7 @@ const options: AnalyticsOptions = {
   years: [{ value: 1405, label: '۱۴۰۵' }],
   currentYear: 1405,
   currentMonth: 7,
+  customColumns: [{ key: 'custom:lab_code', label: 'کد رهگیری آزمایشگاه' }],
   workshop: { name: 'تعمیرگاه نمونه', phone: '', address: '', logo: '' },
 };
 
@@ -132,6 +133,8 @@ describe('گزارش‌گیری پیشرفته', () => {
     expect(screen.getByText('ذخیره قالب گزارش')).toBeInTheDocument();
     expect(screen.getByText('هنوز گزارشی اجرا نشده است')).toBeInTheDocument();
     expect(screen.getAllByText('گروه‌بندی بر اساس').length).toBeGreaterThanOrEqual(2);
+    // ستون‌های سفارشی قابل گزارش از تنظیمات فیلدها به انتخاب‌های جدول اضافه می‌شوند
+    expect(screen.getByText('کد رهگیری آزمایشگاه (سفارشی)')).toBeInTheDocument();
   });
 
   it('با اجرای گزارش، نمودار و جدول داده‌های انتخابی نمایش داده می‌شود', async () => {

@@ -59,6 +59,7 @@ describe('تنظیمات، تاریخچه تغییرات و پشتیبان‌گ�
         lockoutMinutes: 20,
         sessionDays: 5,
         backupRetentionCount: 2,
+        backupEncrypt: false,
       })
       .expect(200);
 
@@ -85,11 +86,18 @@ describe('تنظیمات، تاریخچه تغییرات و پشتیبان‌گ�
       .post('/api/backups')
       .set(bearer(adminToken))
       .expect(201);
-    expect(created.body.name).toMatch(/^backup-\d{8}-\d{6}(-\d+)?\.dump$/);
+    expect(created.body.name).toMatch(/^backup-\d{8}-\d{6}(-\d+)?$/);
 
-    const filePath = path.join(process.env.BACKUP_DIR!, created.body.name as string);
-    expect(fs.existsSync(filePath)).toBe(true);
-    expect(fs.readFileSync(filePath, 'utf8')).toContain('fake backup content');
+    const bundlePath = path.join(process.env.BACKUP_DIR!, created.body.name as string);
+    expect(fs.existsSync(bundlePath)).toBe(true);
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(bundlePath, 'manifest.json'), 'utf8'),
+    ) as { format: string; includesSettings: boolean };
+    expect(manifest.format).toBe('repair-workshop-backup');
+    expect(manifest.includesSettings).toBe(true);
+    expect(fs.readFileSync(path.join(bundlePath, 'database.dump'), 'utf8')).toContain(
+      'fake backup content',
+    );
 
     const list = await request(http).get('/api/backups').set(bearer(adminToken)).expect(200);
     expect(list.body.items).toHaveLength(1);
@@ -99,6 +107,12 @@ describe('تنظیمات، تاریخچه تغییرات و پشتیبان‌گ�
       .set(bearer(adminToken))
       .expect(200);
     expect(String(download.headers['content-disposition'])).toContain('attachment');
+
+    const settingsDownload = await request(http)
+      .get(`/api/backups/${created.body.name as string}/download?file=settings`)
+      .set(bearer(adminToken))
+      .expect(200);
+    expect(String(settingsDownload.headers['content-disposition'])).toContain('settings');
 
     const audit = await request(http)
       .get('/api/audit-logs?action=backup.created')

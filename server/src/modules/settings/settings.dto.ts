@@ -2,6 +2,8 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,8 +13,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { TIMEZONE_OPTIONS } from './settings.service';
 
 const SAFE_FOLDER_NAME = /^(?!.*\.\.)(?!.*[<>:"/\\|?*\u0000-\u001F]).{1,40}$/;
+const SCHEDULE_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export class UpdateSettingsDto {
   @IsOptional()
@@ -85,6 +89,58 @@ export class UpdateSettingsDto {
   @Min(0, { message: 'مهلت پیش‌فرض تحویل نمی‌تواند منفی باشد.' })
   @Max(180, { message: 'مهلت پیش‌فرض تحویل حداکثر ۱۸۰ روز است.' })
   defaultDueDays?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'مسیر نسخه‌های پشتیبان حداکثر ۵۰۰ نویسه است.' })
+  backupDirectory?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  backupScheduleEnabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(SCHEDULE_TIME, { message: 'ساعت پشتیبان‌گیری خودکار باید به قالب HH:MM باشد.' })
+  backupScheduleTime?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  backupEncrypt?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  backupIncludeSettings?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  backupIncludeFiles?: boolean;
+
+  @IsOptional()
+  @IsIn(['fa', 'en'], { message: 'زبان انتخاب‌شده معتبر نیست.' })
+  language?: 'fa' | 'en';
+
+  @IsOptional()
+  @IsIn(['jalali', 'gregorian'], { message: 'تقویم انتخاب‌شده معتبر نیست.' })
+  calendar?: 'jalali' | 'gregorian';
+
+  @IsOptional()
+  @IsIn([...TIMEZONE_OPTIONS], { message: 'منطقه زمانی انتخاب‌شده معتبر نیست.' })
+  timezone?: string;
+
+  @IsOptional()
+  @IsIn(['24', '12'], { message: 'قالب ساعت معتبر نیست.' })
+  timeFormat?: '24' | '12';
+
+  @IsOptional()
+  @IsIn(['light', 'dark', 'system'], { message: 'پوسته انتخاب‌شده معتبر نیست.' })
+  theme?: 'light' | 'dark' | 'system';
+
+  @IsOptional()
+  @IsIn(['blue', 'navy', 'teal', 'violet', 'emerald'], {
+    message: 'رنگ‌بندی انتخاب‌شده معتبر نیست.',
+  })
+  accentColor?: 'blue' | 'navy' | 'teal' | 'violet' | 'emerald';
 
   @IsOptional()
   @IsString()

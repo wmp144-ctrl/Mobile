@@ -38,8 +38,8 @@ export function LockScreen() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 p-4 backdrop-blur-md">
-      <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-white p-6 shadow-2xl shadow-ink-900/30 animate-fade-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/60 p-4 backdrop-blur-md">
+      <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-surface p-6 shadow-2xl shadow-ink-900/30 animate-fade-up">
         <div className="flex flex-col items-center text-center">
           <span className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-xl font-bold text-white shadow-lg shadow-brand-900/20">
             {initials(user?.fullName ?? '')}

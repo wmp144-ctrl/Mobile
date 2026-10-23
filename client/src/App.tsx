@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/stores/auth';
+import { useAppearance } from '@/stores/appearance';
 import { RequireAuth } from '@/components/layout/require-auth';
 import { AppLayout } from '@/components/layout/app-layout';
 import { LoginPage } from '@/features/auth/login-page';
@@ -24,10 +25,12 @@ import { NotFoundPage } from '@/features/not-found-page';
 
 export function App() {
   const initialize = useAuth((state) => state.initialize);
+  const loadAppearance = useAppearance((state) => state.load);
 
   useEffect(() => {
     void initialize();
-  }, [initialize]);
+    void loadAppearance();
+  }, [initialize, loadAppearance]);
 
   return (
     <BrowserRouter>

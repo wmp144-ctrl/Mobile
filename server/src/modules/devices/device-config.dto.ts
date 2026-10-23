@@ -18,10 +18,13 @@ const FIELD_TYPES = [
   'text',
   'textarea',
   'number',
+  'amount',
   'date',
+  'datetime',
   'select',
   'multi_select',
   'checkbox',
+  'file',
   'password',
 ] as const;
 
@@ -56,6 +59,14 @@ export class CreateFieldDto {
   @IsOptional()
   @IsBoolean()
   isRequired?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isSearchable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isReportable?: boolean;
 
   @IsOptional()
   @IsArray()
@@ -94,6 +105,14 @@ export class UpdateFieldDto {
   @IsOptional()
   @IsBoolean()
   isRequired?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isSearchable?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isReportable?: boolean;
 
   @IsOptional()
   @IsArray()

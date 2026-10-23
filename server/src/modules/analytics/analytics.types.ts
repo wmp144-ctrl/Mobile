@@ -49,7 +49,12 @@ export const REPORT_TABLE_COLUMNS = [
   'operationCount',
   'reportedProblem',
 ] as const;
-export type ReportTableColumn = (typeof REPORT_TABLE_COLUMNS)[number];
+export type ReportTableColumnKey = (typeof REPORT_TABLE_COLUMNS)[number];
+/** ستون‌های سفارشی با پیشوند custom: به فیلدهای قابل گزارش فرم دستگاه اشاره می‌کنند */
+export type ReportTableColumn = ReportTableColumnKey | `custom:${string}`;
+
+export const REPORT_TABLE_COLUMN_PATTERN =
+  /^(intakeCode|ownerName|ownerPhone|job|equipmentType|manufacturer|model|status|technician|receivedAt|dueAt|deliveredAt|operationCount|reportedProblem|custom:[a-z0-9_]{1,60})$/;
 
 export const DIMENSION_LABELS: Record<ReportDimension, string> = {
   equipmentType: 'نوع تجهیز',
@@ -134,6 +139,11 @@ export interface ReportTableColumnResult {
   type: 'text' | 'date' | 'number' | 'status';
 }
 
+export interface ReportCustomColumn {
+  key: string;
+  label: string;
+}
+
 export interface ReportTableResult {
   columns: ReportTableColumnResult[];
   rows: Record<string, string | number | null>[];
@@ -192,6 +202,8 @@ export interface AnalyticsOptions {
   years: { value: number; label: string }[];
   currentYear: number;
   currentMonth: number;
+  /** فیلدهای سفارشی که مدیر برای گزارش‌گیری قابل انتخاب کرده است */
+  customColumns: ReportCustomColumn[];
   workshop: { name: string; phone: string; address: string; logo: string };
 }
 

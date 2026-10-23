@@ -37,3 +37,7 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# test tools runtime output
+server/.test-tools/pg_restore
+server/.test-tools/*.args

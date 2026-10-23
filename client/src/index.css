@@ -29,6 +29,15 @@
   --color-accent-500: #f59e0b;
   --color-accent-600: #d97706;
 
+  /* سطح کارت‌ها و پنل‌ها؛ در پوسته تیره تغییر می‌کند */
+  --color-surface: #ffffff;
+
+  /* سرمه‌ای ساختاری (منوی کناری، پنل ورود و پوشش دیالوگ) */
+  --color-navy-700: #1c2a4a;
+  --color-navy-800: #16203a;
+  --color-navy-900: #0f1729;
+  --color-navy-950: #080e1a;
+
   --radius-xl: 0.9rem;
   --radius-2xl: 1.15rem;
 }
@@ -108,4 +117,113 @@
 
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------- رنگ‌بندی انتخابی */
+/* هر رنگ، مقیاس brand را بازنویسی می‌کند؛ بنابراین همه دکمه‌ها و نمودارها هم‌رنگ می‌شوند. */
+[data-accent='blue'] {
+  --color-brand-50: #eef3ff;
+  --color-brand-100: #dde8ff;
+  --color-brand-200: #c0d3ff;
+  --color-brand-300: #96b4ff;
+  --color-brand-400: #688cfa;
+  --color-brand-500: #4364ef;
+  --color-brand-600: #2c46d4;
+  --color-brand-700: #2538ac;
+  --color-brand-800: #22318a;
+  --color-brand-900: #1f2c6d;
+}
+
+[data-accent='navy'] {
+  --color-brand-50: #edf2fb;
+  --color-brand-100: #dbe5f6;
+  --color-brand-200: #b9cbe9;
+  --color-brand-300: #8ba7d6;
+  --color-brand-400: #587dbb;
+  --color-brand-500: #345c9e;
+  --color-brand-600: #234779;
+  --color-brand-700: #1b3a66;
+  --color-brand-800: #172f53;
+  --color-brand-900: #132541;
+}
+
+[data-accent='teal'] {
+  --color-brand-50: #ecfdf8;
+  --color-brand-100: #d2f8ec;
+  --color-brand-200: #a7efda;
+  --color-brand-300: #6ddfc2;
+  --color-brand-400: #33c5a3;
+  --color-brand-500: #14a88a;
+  --color-brand-600: #0c8670;
+  --color-brand-700: #0b6b5b;
+  --color-brand-800: #0c554a;
+  --color-brand-900: #0a463e;
+}
+
+[data-accent='violet'] {
+  --color-brand-50: #f5f2ff;
+  --color-brand-100: #ece5ff;
+  --color-brand-200: #d9ceff;
+  --color-brand-300: #bca8ff;
+  --color-brand-400: #9a7bfb;
+  --color-brand-500: #7b52f0;
+  --color-brand-600: #6336d6;
+  --color-brand-700: #532bb2;
+  --color-brand-800: #452691;
+  --color-brand-900: #392174;
+}
+
+[data-accent='emerald'] {
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fae2;
+  --color-brand-200: #a7f3c9;
+  --color-brand-300: #6ee7a8;
+  --color-brand-400: #34d383;
+  --color-brand-500: #10b569;
+  --color-brand-600: #059256;
+  --color-brand-700: #047548;
+  --color-brand-800: #065f3c;
+  --color-brand-900: #064e33;
+}
+
+/* ---------------------------------------------------------------- پوسته تیره */
+/* فقط برای نمایشگر؛ چاپ همیشه روی سطح روشن انجام می‌شود. */
+@media screen {
+  [data-theme='dark'] {
+    --color-surface: #121a29;
+
+    --color-ink-50: #0b101b;
+    --color-ink-100: #121b2a;
+    --color-ink-200: #23314a;
+    --color-ink-300: #33425e;
+    --color-ink-400: #7e8aa3;
+    --color-ink-500: #96a2b8;
+    --color-ink-600: #adb8cc;
+    --color-ink-700: #c6cfdf;
+    --color-ink-800: #e2e8f3;
+    --color-ink-900: #f2f6fc;
+
+    /* سطح‌های کم‌رنگ رنگ اصلی، با حفظ رنگ انتخابی کاربر */
+    --color-brand-50: color-mix(in oklab, var(--color-brand-600) 18%, #0b101b);
+    --color-brand-100: color-mix(in oklab, var(--color-brand-600) 26%, #0b101b);
+    --color-brand-200: color-mix(in oklab, var(--color-brand-600) 38%, #0b101b);
+    --color-brand-300: color-mix(in oklab, var(--color-brand-600) 55%, #0b101b);
+    --color-brand-400: color-mix(in oklab, var(--color-brand-600) 78%, #0b101b);
+    --color-brand-500: color-mix(in oklab, var(--color-brand-600) 92%, white);
+    --color-brand-700: color-mix(in oklab, var(--color-brand-600) 82%, white);
+
+    --color-emerald-50: #0d241d;
+    --color-emerald-100: #113027;
+    --color-amber-50: #2a2110;
+    --color-amber-100: #352a15;
+    --color-rose-50: #2a131a;
+    --color-rose-100: #351821;
+    --color-sky-50: #0e2130;
+    --color-sky-100: #13293b;
+    --color-violet-50: #1e1733;
+    --color-violet-100: #261e41;
+    --color-accent-400: #fcd34d;
+
+    color-scheme: dark;
+  }
 }

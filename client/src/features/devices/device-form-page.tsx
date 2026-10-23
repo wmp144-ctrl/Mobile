@@ -351,10 +351,20 @@ export function DeviceFormPage() {
           continue;
         }
         customPayload[field.key] = iso;
-      } else if (field.type === 'number') {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) {
-          next[`custom_${field.key}`] = `مقدار «${field.label}» باید عدد باشد.`;
+      } else if (field.type === 'datetime' && typeof value === 'string') {
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+          next[`custom_${field.key}`] = `تاریخ و ساعت «${field.label}» معتبر نیست.`;
+          continue;
+        }
+        customPayload[field.key] = parsed.toISOString();
+      } else if (field.type === 'number' || field.type === 'amount') {
+        const numeric = Number(String(value).replace(/[,٬\s]/g, ''));
+        if (!Number.isFinite(numeric) || (field.type === 'amount' && numeric < 0)) {
+          next[`custom_${field.key}`] =
+            field.type === 'amount'
+              ? `مبلغ «${field.label}» باید عددی نامنفی باشد.`
+              : `مقدار «${field.label}» باید عدد باشد.`;
           continue;
         }
         customPayload[field.key] = numeric;
@@ -455,6 +465,42 @@ export function DeviceFormPage() {
             />
           </FieldBlock>
         );
+      case 'amount':
+        return (
+          <FieldBlock key={field.id} label={field.label} required={field.isRequired} error={error}>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              dir="ltr"
+              value={String(value ?? '')}
+              onChange={(event) => updateCustom(field.key, event.target.value)}
+              {...common}
+            />
+          </FieldBlock>
+        );
+      case 'datetime':
+        return (
+          <FieldBlock key={field.id} label={field.label} required={field.isRequired} error={error}>
+            <Input
+              type="datetime-local"
+              dir="ltr"
+              value={String(value ?? '')}
+              onChange={(event) => updateCustom(field.key, event.target.value)}
+            />
+          </FieldBlock>
+        );
+      case 'file':
+        return (
+          <FieldBlock key={field.id} label={field.label} required={field.isRequired} error={error}>
+            <Input
+              dir="ltr"
+              value={String(value ?? '')}
+              onChange={(event) => updateCustom(field.key, event.target.value)}
+              placeholder={field.placeholder ?? 'نام یا مسیر فایل مرتبط'}
+            />
+          </FieldBlock>
+        );
       case 'date':
         return (
           <FieldBlock key={field.id} label={field.label} required={field.isRequired} error={error}>
@@ -505,7 +551,7 @@ export function DeviceFormPage() {
                       'rounded-xl border px-3 py-1.5 text-xs transition',
                       isSelected
                         ? 'border-brand-300 bg-brand-50 text-brand-700'
-                        : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300',
+                        : 'border-ink-200 bg-surface text-ink-600 hover:border-ink-300',
                     )}
                   >
                     {option.label}
@@ -746,7 +792,7 @@ export function DeviceFormPage() {
                       aria-label="جستجوی مشتری"
                     />
                     {customerListOpen ? (
-                      <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-ink-200 bg-white p-1 shadow-xl">
+                      <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-ink-200 bg-surface p-1 shadow-xl">
                         {(customersQuery.data ?? []).map((customer) => (
                           <button
                             key={customer.id}
@@ -954,7 +1000,7 @@ export function DeviceFormPage() {
                               'rounded-xl border px-3 py-1.5 text-xs transition',
                               selected
                                 ? 'border-brand-300 bg-brand-50 text-brand-700'
-                                : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300',
+                                : 'border-ink-200 bg-surface text-ink-600 hover:border-ink-300',
                             )}
                           >
                             {option.label}

@@ -167,7 +167,7 @@ export function RoleFormDialog({ open, onOpenChange, role, permissions, onSaved 
                         <label
                           key={item.key}
                           className={cn(
-                            'flex cursor-pointer items-start gap-2 rounded-lg border border-transparent bg-white px-2.5 py-2 text-xs transition hover:border-ink-200',
+                            'flex cursor-pointer items-start gap-2 rounded-lg border border-transparent bg-surface px-2.5 py-2 text-xs transition hover:border-ink-200',
                             selected.includes(item.key) && 'border-brand-200 bg-brand-50/60',
                           )}
                         >

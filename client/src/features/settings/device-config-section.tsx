@@ -40,6 +40,8 @@ interface FieldFormState {
   groupName: string;
   placeholder: string;
   isRequired: boolean;
+  isSearchable: boolean;
+  isReportable: boolean;
   optionsText: string;
 }
 
@@ -49,6 +51,8 @@ const EMPTY_FIELD: FieldFormState = {
   groupName: 'اطلاعات تکمیلی',
   placeholder: '',
   isRequired: false,
+  isSearchable: true,
+  isReportable: true,
   optionsText: '',
 };
 
@@ -106,6 +110,8 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
       groupName: field.group,
       placeholder: field.placeholder ?? '',
       isRequired: field.isRequired,
+      isSearchable: field.isSearchable,
+      isReportable: field.isReportable,
       optionsText: field.options.map((option) => option.label).join('\n'),
     });
     setFieldError(null);
@@ -157,6 +163,8 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
       groupName: fieldForm.groupName,
       placeholder: fieldForm.placeholder.trim(),
       isRequired: fieldForm.isRequired,
+      isSearchable: fieldForm.isSearchable,
+      isReportable: fieldForm.isReportable,
     };
     if (!editingField) {
       payload.fieldType = fieldForm.fieldType;
@@ -183,7 +191,10 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
     }
   }
 
-  async function toggleField(field: FieldDefinition, key: 'isEnabled' | 'isRequired') {
+  async function toggleField(
+    field: FieldDefinition,
+    key: 'isEnabled' | 'isRequired' | 'isSearchable' | 'isReportable',
+  ) {
     try {
       await api.patch(`/api/device-config/fields/${field.id}`, { [key]: !field[key] });
       await configQuery.reload();
@@ -367,6 +378,8 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
                 <TableHead>گروه</TableHead>
                 <TableHead>الزامی</TableHead>
                 <TableHead>فعال</TableHead>
+                <TableHead>جست‌وجو</TableHead>
+                <TableHead>گزارش</TableHead>
                 <TableHead className="text-end">ترتیب / عملیات</TableHead>
               </TableRow>
             </TableHeader>
@@ -409,6 +422,22 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
                         label=""
                       />
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={field.isSearchable}
+                      onCheckedChange={() => void toggleField(field, 'isSearchable')}
+                      disabled={!canManage}
+                      label=""
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={field.isReportable}
+                      onCheckedChange={() => void toggleField(field, 'isReportable')}
+                      disabled={!canManage}
+                      label=""
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
@@ -491,7 +520,7 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
                   {items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 py-1.5 text-xs"
+                      className="flex items-center gap-2 rounded-xl border border-ink-200 bg-surface px-3 py-1.5 text-xs"
                     >
                       <button
                         type="button"
@@ -615,6 +644,24 @@ export function DeviceConfigSection({ canManage }: { canManage: boolean }) {
               id="field-required"
               label="تکمیل این فیلد الزامی باشد"
               description="فیلدهای الزامی هنگام ثبت پذیرش اعتبارسنجی می‌شوند."
+            />
+            <Switch
+              checked={fieldForm.isSearchable}
+              onCheckedChange={(checked) =>
+                setFieldForm((prev) => ({ ...prev, isSearchable: checked }))
+              }
+              id="field-searchable"
+              label="در جست‌وجوی تجهیزات استفاده شود"
+              description="مقدار این فیلد در جست‌وجوی سراسری صفحه تجهیزات بررسی می‌شود."
+            />
+            <Switch
+              checked={fieldForm.isReportable}
+              onCheckedChange={(checked) =>
+                setFieldForm((prev) => ({ ...prev, isReportable: checked }))
+              }
+              id="field-reportable"
+              label="در گزارش‌گیری قابل انتخاب باشد"
+              description="این فیلد به ستون‌های قابل انتخاب گزارش‌های تحلیلی اضافه می‌شود."
             />
             <FieldError>{fieldError}</FieldError>
           </div>

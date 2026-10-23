@@ -45,7 +45,7 @@ export function DevicesPrintPage() {
   if (error) return <div className="p-8 text-sm text-rose-700">{error}</div>;
 
   return (
-    <div dir="rtl" className="mx-auto max-w-[1100px] bg-white p-6 text-ink-900 print:max-w-none print:p-0">
+    <div dir="rtl" className="mx-auto max-w-[1100px] bg-surface p-6 text-ink-900 print:max-w-none print:p-0">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link to="/devices">
           <Button variant="outline">

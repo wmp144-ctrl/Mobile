@@ -5,7 +5,7 @@ import { buttonVariants } from '@/components/ui/button';
 export function NotFoundPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink-50 px-4 text-center">
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-sm">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-surface text-brand-600 shadow-sm">
         <Compass className="size-7" />
       </div>
       <div>

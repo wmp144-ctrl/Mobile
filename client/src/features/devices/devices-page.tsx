@@ -338,11 +338,11 @@ export function DevicesPage() {
             </Select>
 
             <details className="relative">
-              <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-ink-200 bg-white px-3.5 text-sm text-ink-700 hover:border-ink-300">
+              <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-ink-200 bg-surface px-3.5 text-sm text-ink-700 hover:border-ink-300">
                 <Columns3 className="size-4" />
                 ستون‌ها
               </summary>
-              <div className="absolute z-20 mt-2 w-56 rounded-xl border border-ink-200 bg-white p-2 shadow-xl">
+              <div className="absolute z-20 mt-2 w-56 rounded-xl border border-ink-200 bg-surface p-2 shadow-xl">
                 {COLUMNS.map((column) => (
                   <label
                     key={column.key}
@@ -353,7 +353,7 @@ export function DevicesPage() {
                         'flex size-4 items-center justify-center rounded border',
                         visibleColumns.includes(column.key)
                           ? 'border-brand-500 bg-brand-500 text-white'
-                          : 'border-ink-300 bg-white',
+                          : 'border-ink-300 bg-surface',
                       )}
                     >
                       {visibleColumns.includes(column.key) ? <Check className="size-3" /> : null}

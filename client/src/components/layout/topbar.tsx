@@ -41,7 +41,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-ink-200/70 bg-white/80 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-ink-200/70 bg-surface/80 backdrop-blur">
       <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <button
@@ -75,7 +75,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
               onClick={() => setMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex items-center gap-2 rounded-xl border border-ink-200 bg-white py-1.5 pe-2 ps-1.5 text-start transition hover:bg-ink-50"
+              className="flex items-center gap-2 rounded-xl border border-ink-200 bg-surface py-1.5 pe-2 ps-1.5 text-start transition hover:bg-ink-50"
             >
               <span className="flex size-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
                 {initials(user?.fullName ?? '')}
@@ -92,7 +92,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
             {menuOpen ? (
               <div
                 role="menu"
-                className="absolute end-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-ink-200 bg-white p-1.5 shadow-xl shadow-ink-900/10 animate-fade-up"
+                className="absolute end-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-ink-200 bg-surface p-1.5 shadow-xl shadow-ink-900/10 animate-fade-up"
               >
                 <div className="border-b border-ink-100 px-3 py-2">
                   <p className="text-sm font-medium text-ink-800">{user?.fullName}</p>

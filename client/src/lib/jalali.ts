@@ -2,54 +2,103 @@ import { isValidJalaaliDate, toGregorian } from 'jalaali-js';
 
 const TEHRAN = 'Asia/Tehran';
 
-const dateFormatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-  timeZone: TEHRAN,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
+export interface FormatPreferences {
+  language: 'fa' | 'en';
+  calendar: 'jalali' | 'gregorian';
+  timezone: string;
+  timeFormat: '24' | '12';
+}
 
-const dateTimeFormatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-  timeZone: TEHRAN,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-});
+let preferences: FormatPreferences = {
+  language: 'fa',
+  calendar: 'jalali',
+  timezone: TEHRAN,
+  timeFormat: '24',
+};
 
-const longDateFormatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-  timeZone: TEHRAN,
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-});
+interface FormatterCache {
+  key: string;
+  date: Intl.DateTimeFormat;
+  dateTime: Intl.DateTimeFormat;
+  long: Intl.DateTimeFormat;
+}
+
+let cache: FormatterCache | null = null;
+
+/** اعمال تنظیمات زبان، تقویم، منطقه زمانی و قالب ساعت از تنظیمات سامانه */
+export function configureFormatting(next: Partial<FormatPreferences>): void {
+  preferences = { ...preferences, ...next };
+  cache = null;
+}
+
+export function getFormattingPreferences(): FormatPreferences {
+  return { ...preferences };
+}
+
+function formatters(): FormatterCache {
+  const key = `${preferences.language}|${preferences.calendar}|${preferences.timezone}|${preferences.timeFormat}`;
+  if (cache?.key === key) return cache;
+  const locale =
+    preferences.calendar === 'jalali'
+      ? preferences.language === 'fa'
+        ? 'fa-IR-u-ca-persian'
+        : 'en-GB-u-ca-persian'
+      : preferences.language === 'fa'
+        ? 'fa-IR'
+        : 'en-GB';
+  const base = {
+    timeZone: preferences.timezone || TEHRAN,
+    year: 'numeric' as const,
+    month: '2-digit' as const,
+    day: '2-digit' as const,
+  };
+  cache = {
+    key,
+    date: new Intl.DateTimeFormat(locale, base),
+    dateTime: new Intl.DateTimeFormat(locale, {
+      ...base,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: preferences.timeFormat === '12',
+    }),
+    long: new Intl.DateTimeFormat(locale, {
+      timeZone: base.timeZone,
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }),
+  };
+  return cache;
+}
 
 function toDate(value: string | Date): Date | null {
   const date = typeof value === 'string' ? new Date(value) : value;
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** تاریخ شمسی کوتاه: ۱۴۰۵/۰۷/۳۰ */
+/** تاریخ کوتاه: ۱۴۰۵/۰۷/۳۰ (یا تاریخ میلادی بر اساس تنظیمات) */
 export function formatJalaliDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
   const date = toDate(value);
-  return date ? dateFormatter.format(date) : '—';
+  return date ? formatters().date.format(date) : '—';
 }
 
-/** تاریخ و ساعت شمسی: ۱۴۰۵/۰۷/۳۰ - ۱۴:۳۰ */
+/** تاریخ و ساعت: ۱۴۰۵/۰۷/۳۰ - ۱۴:۳۰ */
 export function formatJalaliDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
   const date = toDate(value);
-  return date ? dateTimeFormatter.format(date).replace(/[،,]\s*/, ' - ') : '—';
+  return date
+    ? formatters()
+        .dateTime.format(date)
+        .replace(/[،,]\s*/, ' - ')
+    : '—';
 }
 
 /** تاریخ کامل با نام روز و ماه: پنجشنبه ۳۰ مهر ۱۴۰۵ */
 export function formatJalaliLong(value: string | Date = new Date()): string {
   const date = toDate(value);
-  return date ? longDateFormatter.format(date) : '—';
+  return date ? formatters().long.format(date) : '—';
 }
 
 export function normalizeDigits(input: string): string {

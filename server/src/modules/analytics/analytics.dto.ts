@@ -10,6 +10,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -21,7 +22,7 @@ import {
   REPORT_CHART_TYPES,
   REPORT_DIMENSIONS,
   REPORT_METRICS,
-  REPORT_TABLE_COLUMNS,
+  REPORT_TABLE_COLUMN_PATTERN,
   type ReportChartType,
   type ReportDimension,
   type ReportMetric,
@@ -119,8 +120,8 @@ export class RunReportDto extends AnalyticsFilterDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(14)
-  @IsIn(REPORT_TABLE_COLUMNS, { each: true, message: 'ستون جدول معتبر نیست.' })
+  @ArrayMaxSize(20)
+  @Matches(REPORT_TABLE_COLUMN_PATTERN, { each: true, message: 'ستون جدول معتبر نیست.' })
   tableColumns?: ReportTableColumn[];
 
   @IsOptional()

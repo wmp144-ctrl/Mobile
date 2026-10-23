@@ -20,6 +20,8 @@ export class SystemService {
       appName: APP_NAME,
       version: APP_VERSION,
       workshopName: settings.workshop.name,
+      workshopLogo: settings.workshop.logo,
+      appearance: settings.appearance,
       serverTime: new Date().toISOString(),
     };
   }

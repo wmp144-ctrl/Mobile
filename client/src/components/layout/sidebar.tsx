@@ -22,14 +22,14 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         <button
           type="button"
           onClick={onClose}
-          className="fixed inset-0 z-30 bg-ink-900/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-navy-900/40 backdrop-blur-sm lg:hidden"
           aria-label="بستن منو"
         />
       ) : null}
 
       <aside
         className={cn(
-          'fixed inset-y-0 start-0 z-40 flex w-[272px] flex-col bg-ink-900 text-white transition-transform duration-200 lg:translate-x-0',
+          'fixed inset-y-0 start-0 z-40 flex w-[272px] flex-col bg-navy-900 text-white transition-transform duration-200 lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : 'translate-x-full',
         )}
       >

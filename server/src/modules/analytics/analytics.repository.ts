@@ -12,6 +12,7 @@ import {
   type ReportChartSeries,
   type ReportMetric,
   type ReportTableColumn,
+  type ReportTableColumnKey,
   type ReportTableColumnResult,
   type ReportTableResult,
 } from './analytics.types';
@@ -342,13 +343,47 @@ export class AnalyticsRepository {
     columns: ReportTableColumn[],
     limit = 500,
   ): Promise<ReportTableResult> {
-    const selected = columns.filter((column) => REPORT_TABLE_COLUMNS.includes(column));
+    const builtin = columns.filter((column): column is ReportTableColumnKey =>
+      (REPORT_TABLE_COLUMNS as readonly string[]).includes(column),
+    );
+    const customKeys = columns
+      .filter((column) => column.startsWith('custom:'))
+      .map((column) => column.slice('custom:'.length))
+      .filter((key) => /^[a-z0-9_]{1,60}$/.test(key));
+
+    const specs = new Map<string, TableSpec>();
+    for (const column of builtin) specs.set(column, TABLE_SPECS[column]);
+    if (customKeys.length > 0) {
+      const definitions = await this.db.query<{
+        field_key: string;
+        label_fa: string;
+        field_type: string;
+      }>(
+        `SELECT field_key, label_fa, field_type
+           FROM field_definitions
+          WHERE entity = 'device' AND is_reportable AND field_key = ANY($1::text[])`,
+        [customKeys],
+      );
+      for (const definition of definitions) {
+        specs.set(`custom:${definition.field_key}`, {
+          sql: `d.custom_fields->>'${definition.field_key}'`,
+          label: definition.label_fa,
+          type: ['number', 'amount'].includes(definition.field_type)
+            ? 'number'
+            : ['date', 'datetime'].includes(definition.field_type)
+              ? 'date'
+              : 'text',
+        });
+      }
+    }
+
+    const selected = [...specs.keys()];
     if (selected.length === 0) {
       return { columns: [], rows: [], total: 0 };
     }
     const { where, params } = this.buildFilter(filter);
     const select = selected
-      .map((column) => `${TABLE_SPECS[column].sql} AS "${column}"`)
+      .map((column) => `${specs.get(column)!.sql} AS "${column}"`)
       .join(', ');
     const rows = await this.db.query<Record<string, unknown>>(
       `SELECT ${select}
@@ -362,15 +397,22 @@ export class AnalyticsRepository {
     const mapped = rows.map((row) => {
       const output: Record<string, string | number | null> = {};
       for (const column of selected) {
+        const spec = specs.get(column)!;
         const value = row[column];
         if (value === null || value === undefined) {
           output[column] = null;
-        } else if (DATE_COLUMNS.has(column)) {
+        } else if (spec.type === 'date') {
           output[column] = value instanceof Date ? value.toISOString() : String(value);
         } else if (column === 'status') {
           output[column] = STATUS_LABELS.get(String(value)) ?? String(value);
-        } else if (column === 'operationCount') {
+        } else if (spec.type === 'number') {
           output[column] = Number(value);
+        } else if (typeof value === 'boolean') {
+          output[column] = value ? 'بله' : 'خیر';
+        } else if (Array.isArray(value)) {
+          output[column] = value.map(String).join('، ');
+        } else if (typeof value === 'object') {
+          output[column] = JSON.stringify(value);
         } else {
           output[column] = String(value);
         }
@@ -381,12 +423,22 @@ export class AnalyticsRepository {
     return {
       columns: selected.map((column) => ({
         key: column,
-        label: TABLE_SPECS[column].label,
-        type: TABLE_SPECS[column].type,
+        label: specs.get(column)!.label,
+        type: specs.get(column)!.type,
       })),
       rows: mapped,
       total: mapped.length,
     };
+  }
+
+  /** فیلدهای سفارشی فرم دستگاه که مدیر برای گزارش‌گیری قابل انتخاب کرده است */
+  async reportableCustomColumns(): Promise<{ key: string; label: string }[]> {
+    const rows = await this.db.query<{ field_key: string; label_fa: string }>(
+      `SELECT field_key, label_fa FROM field_definitions
+        WHERE entity = 'device' AND is_reportable AND is_enabled
+        ORDER BY sort_order ASC, created_at ASC`,
+    );
+    return rows.map((row) => ({ key: `custom:${row.field_key}`, label: row.label_fa }));
   }
 
   async equipmentTypeOptions(): Promise<{ value: string; label: string; count: number }[]> {

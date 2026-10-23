@@ -37,6 +37,7 @@
   storage_open_tickets ← بلیت یک‌بارمصرف بازکردن پوشه برای برنامه کمکی
 
   users 1 ──── n saved_reports  (قالب‌های گزارش شخصی/مشترک، config از نوع JSONB)
+  backup_runs ← تاریخچه پشتیبان‌گیری/بازیابی، وضعیت و خطا
   توابع گزارش‌گیری: ir_jalali_year / ir_jalali_month / ir_jalali_ym
 ```
 
@@ -110,6 +111,12 @@
 `backup.retentionCount` (۱۴)، `devices.intakePrefix` (`MR`)، `devices.defaultDueDays` (۳)،
 `storage.folderLayout` (`{year}/{intakeCode}`)، `storage.subfolders` (شش زیرپوشه پیش‌فرض) و
 `storage.lowSpaceGb` (۵).
+
+تنظیمات مرحله ۵: `app.language` (`fa`)، `app.calendar` (`jalali`)، `app.timezone`
+(`Asia/Tehran`)، `app.timeFormat` (`24`)، `app.theme` (`light`)، `app.accentColor` (`blue`)،
+`backup.directory` (خالی = `BACKUP_DIR`)، `backup.scheduleEnabled` (خاموش)،
+`backup.scheduleTime` (`03:00`)، `backup.encrypt` (فعال)، `backup.includeSettings` (فعال) و
+`backup.includeFiles` (غیرفعال).
 
 ### `customers`
 | ستون | نوع | توضیح |
@@ -269,11 +276,13 @@
 | entity | text | موجودیت هدف (پیش‌فرض `device`) |
 | field_key | text | کلید ماشینی؛ یکتا در هر موجودیت |
 | label_fa | text | برچسب فارسی |
-| field_type | text | text / textarea / number / date / select / multi_select / checkbox / password |
+| field_type | text | text / textarea / number / amount / date / datetime / select / multi_select / checkbox / file / password |
 | group_name | text | گروه نمایش در فرم |
 | placeholder | text | راهنمای فیلد |
 | is_system | boolean | فیلد اصلی؛ حذف نمی‌شود |
 | is_enabled / is_required / is_locked | boolean | فعال، اجباری و غیرقابل تغییر |
+| is_searchable | boolean | استفاده در جست‌وجوی سراسری تجهیزات (پیش‌فرض true) |
+| is_reportable | boolean | نمایش به‌عنوان ستون جدول گزارش‌ها (پیش‌فرض true) |
 | options | jsonb | گزینه‌های فیلدهای انتخابی |
 | sort_order | integer | ترتیب نمایش |
 | created_at / updated_at | timestamptz | زمان‌ها |
@@ -301,6 +310,21 @@
 | created_by / updated_by | uuid FK → users | سازنده و آخرین ویرایش‌کننده |
 | created_at / updated_at / deleted_at | timestamptz | زمان ساخت، ویرایش و حذف نرم |
 
+### `backup_runs`
+| ستون | نوع | توضیح |
+| --- | --- | --- |
+| id | uuid PK | شناسه |
+| bundle_name | text | نام بسته پشتیبان (`backup-YYYYMMDD-HHMMSS`) |
+| operation | text | `backup` یا `restore` |
+| trigger_source | text | `manual`، `scheduled` یا `pre_restore` |
+| status | text | `success` یا `failed` |
+| encrypted / includes_files | boolean | وضعیت رمزنگاری و همراهی فایل‌ها |
+| duration_ms | integer | مدت اجرا |
+| error | text | پیام خطا (حداکثر ۵۰۰ نویسه) |
+| metadata | jsonb | جزئیات (اندازه، بخش‌های بازیابی، نسخه ایمن) |
+| created_by | uuid FK → users | کاربر اجراکننده (برای اجرای خودکار خالی) |
+| created_at | timestamptz | زمان؛ ایندکس نزولی برای آخرین وضعیت |
+
 ### توابع تقویم شمسی
 
 مهاجرت `005_reporting.sql` چهار تابع پایدار در PostgreSQL تعریف می‌کند:
@@ -324,6 +348,7 @@
 | `003_customers_devices.sql` | مشتریان، تجهیزات، تاریخچه وضعیت، اقدامات، فایل‌ها، تصاویر، یادداشت‌ها، تعریف فیلدها و فهرست گزینه‌ها |
 | `004_storage_files.sql` | محل‌های ذخیره‌سازی، متادیتای فایل و بلیت بازکردن پوشه، تنظیمات پوشه و مجوز `files.view` |
 | `005_reporting.sql` | توابع تقویم شمسی در PostgreSQL، جدول `saved_reports` و مجوز `reports.manage` |
+| `006_phase5_settings_backup.sql` | انواع جدید فیلد (مبلغ/تاریخ‌وساعت/فایل)، پرچم‌های جست‌وجو/گزارش، تنظیمات ظاهر و پشتیبان و جدول `backup_runs` |
 
 ## مجوزهای تعریف‌شده
 
